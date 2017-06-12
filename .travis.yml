@@ -1,0 +1,3 @@
+language: python
+notifications:
+  slack: pdx-capstone-team-d:cXdI5uhxszX12tSNdERuUKky
