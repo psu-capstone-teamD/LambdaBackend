@@ -1,0 +1,7 @@
+language: python
+notifications:
+  slack: pdx-capstone-team-d:cXdI5uhxszX12tSNdERuUKky
+
+install: "pip install -r requirements.txt"
+
+script: python --version
