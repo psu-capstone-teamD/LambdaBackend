@@ -5,3 +5,4 @@ notifications:
 install: "pip install -r requirements.txt"
 
 script: python --version
+script: python -m unittest discover
