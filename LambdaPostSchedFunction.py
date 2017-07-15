@@ -1,5 +1,5 @@
 import json
-from SchedulerController import SchedulerController
+from SchedulerController import *
 
 print('Loading function')
 controller = SchedulerController()
@@ -29,7 +29,9 @@ def lambda_handler(event, context):
 
     operation =event['httpMethod']
     if operation in operations:
-        payload = json.loads(event['body'])
-        return respond(None, operations[operation](controller, payload))
+        payload = event['body']
+        if (operation == 'POST'):
+            controller.inputxml(payload)
+        return respond(None, "Post successful")
     else:
         return respond(ValueError('Unsupported method "{}"'.format(operation)))
