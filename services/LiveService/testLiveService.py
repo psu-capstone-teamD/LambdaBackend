@@ -8,8 +8,8 @@ L = LiveService()
 
 class LiveServiceTest(unittest.TestCase):
 
-    def test_get_nodes(self):
-        resp = L.get('/nodes')
+    def test_get_events(self):
+        resp = L.getLiveEvents()
         self.assertEqual(resp.status_code, 200)
 
     def test_create_live_event(self):
@@ -19,15 +19,15 @@ class LiveServiceTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 201)
 
     def test_bad_event(self):
-        resp = L.post('/live_events', '<Im a bad event></>')
+        resp = L.createEvent('<Im a bad event></>')
         self.assertEqual(resp.status_code, 422)
 
     def test_bad_schedule(self):
-        resp = L.post('/schedules', '<Im a bad schedule></>')
+        resp = L.createSchedule('<Im a bad schedule></>')
         self.assertEqual(resp.status_code, 422)
 
-    def test_bad_endpoint(self):
-        resp = L.get('/I_dont_exist')
+    def test_unknown_event(self):
+        resp = L.removeEvent(-5)
         self.assertEqual(resp.status_code, 404)
 
     def test_bad_start_time(self):
