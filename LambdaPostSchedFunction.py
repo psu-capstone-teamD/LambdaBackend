@@ -15,23 +15,10 @@ def respond(err, res=None):
 
 
 def lambda_handler(event, context):
-    '''Demonstrates a simple HTTP endpoint using API Gateway. You have full
-    access to the request and response payload, including headers and
-    status code.
+    payload = event['body']
+    response = controller.inputxml(payload)
 
-    To make a POST, pass in the payload to the controller as a JSON body.
-    '''
-    #print("Received event: " + json.dumps(event, indent=2))
-
-    operations = {
-        'POST': lambda controller, x: controller.inputxml(**x),
-    }
-
-    operation =event['httpMethod']
-    if operation in operations:
-        payload = event['body']
-        if (operation == 'POST'):
-            controller.inputxml(payload)
-        return respond(None, "Post successful")
-    else:
-        return respond(ValueError('Unsupported method "{}"'.format(operation)))
+    try:
+        return respond(None, response.content)
+    except Exception as e:
+        return respond(ValueError('Error: "{}"'.format(response)))
