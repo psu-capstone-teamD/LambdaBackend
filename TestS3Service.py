@@ -8,19 +8,19 @@ class MyTestCase(unittest.TestCase):
         s3 = S3Service()
         data = "this is some text to put into s3"
         resp = s3.storexml('livexmlstorage', 'afilename.xml', data)
-        self.assertEqual(resp["statusCode"], '200')
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_bxf(self):
         s3 = S3Service()
         data = "this is some text to put into s3"
         resp = s3.storexml('bxfstorage', 'afilename.xml', data)
-        self.assertEqual(resp["statusCode"], '200')
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_bxf_isAFile(self):
         s3 = S3Service()
         data = "this is some text to put into s3"
         resp = s3.storexml('bxfstorage', 'afilename.xml', data)
-        self.assertEqual(resp["statusCode"], '200')
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_live_inputnotaString(self):
         s3 = S3Service()
