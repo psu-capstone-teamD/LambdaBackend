@@ -1,5 +1,5 @@
-from S3Service import S3Service
-from LiveService import LiveService
+from services.S3Service.S3Service import S3Service
+from services.LiveService.LiveService import LiveService
 #from generateXML import XMLGenerator
 from ConverterService import ConverterService
 
