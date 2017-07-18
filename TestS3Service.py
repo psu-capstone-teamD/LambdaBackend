@@ -7,41 +7,45 @@ class MyTestCase(unittest.TestCase):
     def test_storexml__live(self):
         s3 = S3Service()
         data = "this is some text to put into s3"
-        print(s3.storexml('livexmlstorage', 'afilename.xml', data))
+        resp = s3.storexml('livexmlstorage', 'afilename.xml', data)
+        self.assertEqual(resp["statusCode"], '200')
 
     def test_storexml_bxf(self):
         s3 = S3Service()
         data = "this is some text to put into s3"
-        print(s3.storexml('bxfstorage', 'afilename.xml', data))
+        resp = s3.storexml('bxfstorage', 'afilename.xml', data)
+        self.assertEqual(resp["statusCode"], '200')
 
     def test_storexml_bxf_isAFile(self):
         s3 = S3Service()
         data = "this is some text to put into s3"
-        print(s3.storexml('bxfstorage', 'afilename.xml', data))
+        resp = s3.storexml('bxfstorage', 'afilename.xml', data)
+        self.assertEqual(resp["statusCode"], '200')
 
     def test_storexml_live_inputnotaString(self):
         s3 = S3Service()
-        print(s3.storexml('livexmlstorage', 'afilename.xml', 1))
+        resp = s3.storexml('livexmlstorage', 'afilename.xml', 1)
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_bxf_inputnotaString(self):
         s3 = S3Service()
-        print(s3.storexml('bxfstorage', 'afilename.xml', 1))
+        resp = s3.storexml('bxfstorage', 'afilename.xml', 1)
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_wrong_bucket(self):
         s3 = S3Service()
-        print(s3.storexml('incorrectBucketName', 'afilename.xml', 'afile.xml'))
+        resp = s3.storexml('incorrectBucketName', 'afilename.xml', 'afile.xml')
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_wrong_bucket(self):
         s3 = S3Service()
-        print(s3.storexml(1, 'afilename.xml', 'afile.xml'))
+        resp = s3.storexml(1, 'afilename.xml', 'afile.xml')
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_storexml_wrong_filename(self):
         s3 = S3Service()
-        print(s3.storexml('livexmlstorage', 1, 'afile.xml'))
-
-    def test_storexml_notAFile(self):
-        s3 = S3Service()
-        print(s3.storexml('livexmlstorage', 'afilename.xml', 'afile.xml'))
+        resp = s3.storexml('livexmlstorage', 1, 'afile.xml')
+        self.assertEqual(resp["statusCode"], '400')
 
     def test_getxml_live_bucket(self):
         s3 = S3Service()

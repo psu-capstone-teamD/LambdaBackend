@@ -1,5 +1,3 @@
-import copy
-
 
 class ConverterService:
     def BXFtoLive(self, xml_file):
