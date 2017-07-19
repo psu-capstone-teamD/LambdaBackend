@@ -58,3 +58,7 @@ class SchedulerController:
         #send to LiveService
         liveservice = LiveService()
         return liveservice.createEvent(convertedxml)
+
+    def getLiveEvent(self):
+        live = LiveService()
+        return live.getLiveEvents()
