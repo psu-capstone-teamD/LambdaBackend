@@ -4,5 +4,5 @@ notifications:
 
 install: "pip install -r requirements.txt"
 
-script: python TestS3Service.py
+script: python ./services/S3Service/TestS3Service.py
 script: python TestSchedulerController.py

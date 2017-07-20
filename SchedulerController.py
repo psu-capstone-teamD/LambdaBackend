@@ -1,7 +1,7 @@
-from S3Service import S3Service
-from LiveService import LiveService
+from services.S3Service.S3Service import S3Service
+from services.LiveService.LiveService import LiveService
+#from generateXML import XMLGenerator
 from ConverterService import ConverterService
-
 
 class SchedulerController:
     def __init__(self):
@@ -13,46 +13,52 @@ class SchedulerController:
 
     def inputxml(self, xml):
         if (not isinstance(xml, basestring)):
-            return "Not a string valid input"
+            return "StatusCode: 400: Not a valid string input"
 
         # store the bxf.xml file to s3
-        self.storebxffile(self.bxfFileName, xml)
+        bxfBucketResponse = self.storebxffile(self.bxfFileName, xml)
+        if(bxfBucketResponse["statusCode"] != '200'):
+            return bxfBucketResponse
 
         # convert bxf to live xml
+        #xmlConverterService = XMLGenerator()
         xmlConverterService = ConverterService()
         try:
-            convertedxml = xmlConverterService.BXFtoLive(xml_file=xml)
+            #convertedxml = xmlConverterService.BXFtoLive(xml_file=xml)
+            convertedxml = xmlConverterService.BXFtoLive(xml)
         except Exception as e:
-            return "Not valid .xml structure"
+            return "StatusCode: 400: Not valid .xml structure"
 
         # store the live xml to s3
-        self.storelivefile(self.liveFileName, convertedxml)
+        liveBucketResponse = self.storelivefile(self.liveFileName, convertedxml)
+        if (liveBucketResponse["statusCode"] != '200'):
+            return liveBucketResponse
 
         # send the live xml to Live
         return self.sendToLive(convertedxml)
 
     def storebxffile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
-            return
-        self.s3service.storexml(
-            self.bxfstorage, filename=filename, xml_file=xml_file)
+            return {'statusCode': '400', 'body': 'filename must be a string'}
+        return self.s3service.storexml(self.bxfstorage, filename=filename, xml_file=xml_file)
 
     def storelivefile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
-            return
-        self.s3service.storexml(self.livexmlstorage, filename, xml_file)
+            return {'statusCode': '400', 'body': 'filename must be a string'}
+        return self.s3service.storexml(self.livexmlstorage, filename, xml_file)
 
     def loadLiveFile(self, filename):
         if (not isinstance(filename, basestring)):
-            return
+            return {'statusCode': '400', 'body': 'filename must be a string'}
         return self.s3service.getxml(self.livexmlstorage, filename)
 
     def sendToLive(self, convertedxml):
         if (not isinstance(convertedxml, basestring)):
-            return
-        # try to send to LiveService
+            return {'statusCode': '400', 'body': 'Not a valid string input'}
+        #send to LiveService
         liveservice = LiveService()
-        try:
-            return liveservice.createSchedule(convertedxml)
-        except Exception as e:
-            return "statusCode': '400"
+        return liveservice.createEvent(convertedxml)
+
+    def getLiveEvent(self):
+        live = LiveService()
+        return live.getLiveEvents()
