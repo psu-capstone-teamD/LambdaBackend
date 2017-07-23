@@ -1,6 +1,6 @@
 from services.S3Service.S3Service import S3Service
 from services.LiveService.LiveService import LiveService
-from ConverterService import ConverterService
+from services.ConverterService import ConverterService
 
 class SchedulerController:
     def __init__(self):

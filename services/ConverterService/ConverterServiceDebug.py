@@ -5,7 +5,7 @@ from generateXML import XMLGenerator
 
 
 def main():
-    xmlService = xmlConverterService()
+    xmlService = ConverterService()
 
     with open('test_BXF/BXFshort.xml', 'r') as infile:
         bxf = infile.read()
@@ -13,14 +13,14 @@ def main():
     xmlService.bxfToLive(bxf)
 
 def main2():
-    xmlService = xmlConverterService()
+    xmlService = ConverterService()
 
     with open('test_BXF/BXFshort.xml', 'r') as infile:
         bxf = infile.read()
 
     xmlService.bxfToLiveUpdate(bxf, "urn:uuid:e618de18-9787-445f-ab4f-f0f7764ad1a7")
 
-class xmlConverterService:
+class ConverterService:
 
     def bxfToLive(self, bxf):
 

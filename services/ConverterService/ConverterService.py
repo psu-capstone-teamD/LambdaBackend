@@ -3,7 +3,7 @@ from StringIO import StringIO
 from generateXML import XMLGenerator
 
 
-class xmlConverterService:
+class ConverterService:
 
     def __init__(self):
         self.xmlgenerator = XMLGenerator()
