@@ -57,9 +57,8 @@ class SchedulerController:
         live = LiveService()
         return live.getLiveEvents()
 
-    def getNextTwo(self, bxf, currentUUID):
+    def getNextTwo(self, bxf, currentVideoUUID):
         if (not isinstance(currentUUID, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
-        xmlConverterService = ConverterService()
-        convertedxml = xmlConverterService.BXFtoLiveUpdate(bxf)
+        convertedxml = self.xmlConverterService.bxfToLiveUpdate(bxf, currentVideoUUID)
         return convertedxml
