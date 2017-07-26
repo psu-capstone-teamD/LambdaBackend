@@ -13,6 +13,10 @@ class LiveService:
         endpoint = '/live_events'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
+    def getLiveEventsByEventId(self, eventId):
+        endpoint = '/live_events/' + str(eventId)
+        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
     def getSchedules(self):
         endpoint = '/schedules'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
