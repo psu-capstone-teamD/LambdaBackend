@@ -1,34 +1,31 @@
 from services.S3Service.S3Service import S3Service
 from services.LiveService.LiveService import LiveService
-#from generateXML import XMLGenerator
-from ConverterService import ConverterService
 import xml.etree.ElementTree as ET
 import time
+from services.ConverterService.ConverterService import ConverterService
 
 class SchedulerController:
     def __init__(self):
+        self.s3service = S3Service()
+        self.xmlConverterService = ConverterService()
         self.livexmlstorage = 'livexmlstorage'
         self.bxfstorage = 'bxfstorage'
-        self.s3service = S3Service()
         self.bxfFileName = 'bxffile.xml'
         self.liveFileName = 'livefile.xml'
         self.EVENT_ID = None
 
-    def inputxml(self, xml):
-        if (not isinstance(xml, basestring)):
+    def inputbxf(self, bxf):
+        if (not isinstance(bxf, basestring)):
             return "StatusCode: 400: Not a valid string input"
 
         # store the bxf.xml file to s3
-        bxfBucketResponse = self.storebxffile(self.bxfFileName, xml)
+        bxfBucketResponse = self.storebxffile(self.bxfFileName, bxf)
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
 
         # convert bxf to live xml
-        #xmlConverterService = XMLGenerator()
-        xmlConverterService = ConverterService()
         try:
-            #convertedxml = xmlConverterService.BXFtoLive(xml_file=xml)
-            convertedxml = xmlConverterService.BXFtoLive(xml)
+            convertedxml = self.xmlConverterService.BXFtoLive(bxf)
         except Exception as e:
             return "StatusCode: 400: Not valid .xml structure"
 
@@ -36,8 +33,6 @@ class SchedulerController:
         liveBucketResponse = self.storelivefile(self.liveFileName, convertedxml)
         if (liveBucketResponse["statusCode"] != '200'):
             return liveBucketResponse
-
-        # send the live xml to Live
         return self.sendToLive(convertedxml)
 
     def storebxffile(self, filename, xml_file):
@@ -58,7 +53,6 @@ class SchedulerController:
     def sendToLive(self, convertedxml):
         if (not isinstance(convertedxml, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
-        #send to LiveService
         liveservice = LiveService()
 
         #call justins method to return only 2 at a time
@@ -120,3 +114,8 @@ class SchedulerController:
         elapsedText = root.find('elapsed')
         return elapsedText.text
 
+    def getNextTwo(self, bxf, currentVideoUUID):
+        if (not isinstance(currentVideoUUID, basestring)):
+            return {'statusCode': '400', 'body': 'Not a valid string input'}
+        convertedxml = self.xmlConverterService.bxfToLiveUpdate(bxf, currentVideoUUID)
+        return convertedxml
