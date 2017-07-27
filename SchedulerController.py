@@ -3,6 +3,7 @@ from services.LiveService.LiveService import LiveService
 #from generateXML import XMLGenerator
 from ConverterService import ConverterService
 import xml.etree.ElementTree as ET
+import time
 
 class SchedulerController:
     def __init__(self):
@@ -61,6 +62,7 @@ class SchedulerController:
         liveservice = LiveService()
 
         #call justins method to return only 2 at a time
+        #need time.sleep(0.5) after posting first event to getting live event info
         results  = liveservice.createEvent(convertedxml)
         #get the Event ID from the returned xml
         root = ET.fromstring(results.content)
@@ -79,33 +81,38 @@ class SchedulerController:
         root = ET.fromstring(results.content)
         child = root.find('live_event')
         href = child.get('href')
+        #strip off the /live_events/ to just get the event number
         event = href[13:]
         return event
 
     def getDurationInSeconds(self, xml_code):
         root = ET.fromstring(xml_code.content)
-        input = root.find('input')
-        input_info = input.find('input_info')
-        general = input_info.find('general')
-        durationText = general.find('duration')
-        duration = durationText.text
-        #Strip the min and sec off of the time for the duration
-        digits = []
-        for i in duration:
-            if i.isdigit():
-                digits.append(i)
-            if not i.isdigit():
-                if i == ' ':
-                    continue
-                if i == 's':
-                    strippedDuration = ''.join(digits)
-                    break
-                if i == 'm':
-                    strippedDuration = ''.join(digits)
-                    min = int(strippedDuration)
-                    sec = 60 * min
-                    strippedDuration = str(sec)
-                    break
+        totalDuration = 0
+        for input in root.iter('input'):
+            input_info = input.find('input_info')
+            general = input_info.find('general')
+            durationTag = general.find('duration')
+            duration = durationTag.text
+            #Strip the min and sec off of the time for the duration
+            digits = []
+            for i in duration:
+                if i.isdigit():
+                    digits.append(i)
+                if not i.isdigit():
+                    if i == ' ':
+                        continue
+                    if i == 's':
+                        strippedDuration = ''.join(digits)
+                        sec = int(strippedDuration)
+                        totalDuration = totalDuration + sec
+                        break
+                    if i == 'm':
+                        strippedDuration = ''.join(digits)
+                        min = int(strippedDuration)
+                        sec = 60 * min
+                        totalDuration = totalDuration + sec
+                        break
+        strippedDuration = str(totalDuration)
         return strippedDuration
 
     def getElapsedInSeconds(self, xml_code):
