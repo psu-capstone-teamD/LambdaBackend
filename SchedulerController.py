@@ -114,8 +114,19 @@ class SchedulerController:
         elapsedText = root.find('elapsed')
         return elapsedText.text
 
+    def getLastUUID(self, xml_code):
+        root = ET.fromstring(xml_code.content)
+        uuids = []
+        for input in root.iter('input'):
+            file_input = input.find('file_input')
+            uuid = file_input.find('certificate_file')
+            uuid = uuid.text.replace("urn:uuid:", "")
+            uuids.append(uuid)
+        return uuids[-1]
+
     def getNextTwo(self, bxf, currentVideoUUID):
         if (not isinstance(currentVideoUUID, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
         convertedxml = self.xmlConverterService.bxfToLiveUpdate(bxf, currentVideoUUID)
         return convertedxml
+
