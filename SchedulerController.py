@@ -1,7 +1,6 @@
 from services.S3Service.S3Service import S3Service
 from services.LiveService.LiveService import LiveService
-#from generateXML import XMLGenerator
-from ConverterService import ConverterService
+from services.XMLConverterService.XMLConverterService import XMLGenerator
 
 class SchedulerController:
     def __init__(self):
@@ -21,18 +20,18 @@ class SchedulerController:
             return bxfBucketResponse
 
         # convert bxf to live xml
-        #xmlConverterService = XMLGenerator()
-        xmlConverterService = ConverterService()
+        xmlConverterService = XMLGenerator()
         try:
-            #convertedxml = xmlConverterService.BXFtoLive(xml_file=xml)
-            convertedxml = xmlConverterService.BXFtoLive(xml)
+            convertedxml = xmlConverterService.run(xml)
         except Exception as e:
             return "StatusCode: 400: Not valid .xml structure"
 
         # store the live xml to s3
+
         liveBucketResponse = self.storelivefile(self.liveFileName, convertedxml)
         if (liveBucketResponse["statusCode"] != '200'):
             return liveBucketResponse
+
 
         # send the live xml to Live
         return self.sendToLive(convertedxml)
