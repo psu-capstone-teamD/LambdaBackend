@@ -25,20 +25,20 @@ class LiveService:
         endpoint = '/schedules'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
 
-    def updatePlaylist(self, event_id, xml):
-        endpoint = '/live_events/' + str(event_id) + '/playlist'
+    def updatePlaylist(self, eventID, xml):
+        endpoint = '/live_events/' + str(eventID) + '/playlist'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
 
-    def removeEvent(self, event_id):
-        endpoint = '/live_events' + str(event_id)
+    def removeEvent(self, eventID):
+        endpoint = '/live_events' + str(eventID)
         return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
-    def removeSchedule(self, sched_id):
-        endpoint = '/schedules/' + str(sched_id)
+    def removeSchedule(self, schedID):
+        endpoint = '/schedules/' + str(schedID)
         return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
-    def removeInput(self, event_id, input_id, xml):
-        endpoint = '/live_events/' + str(event_id) + '/inputs/' + str(input_id)
+    def removeInput(self, eventID, inputID, xml):
+        endpoint = '/live_events/' + str(eventID) + '/inputs/' + str(inputID)
         return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def setHeaders(self, endpoint):

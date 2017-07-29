@@ -1,65 +1,75 @@
 import xml.etree.ElementTree as ET
 from StringIO import StringIO
 
+
+
 class XMLGenerator:
 
-    def run(self, bxfXML):
+    def run(self, bxfXML, currentVideoUUID):
         tree = ET.ElementTree(bxfXML)
-        firstroot = tree.getroot()
-        root = self.iteratetoSchedule(self.stripNameSpace(firstroot))
-        events = self.parse(root)
-        liveXML = self.generateXML(events)
+        root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
+        metadata = self.parseMetadata(root)
+        events = self.nextNevents(2, self.parseEvents(root), currentVideoUUID)
+        liveXML = self.generateXML(metadata, events)
         liveString = self.filetostring(liveXML.getroot())
         return liveString
 
-    def generateXML(self, events):
-        xmlInfo = '?xml version="1.0" encoding="UTF-8"?'
-        infoHeader = ET.Element(xmlInfo)
+    def generateXML(self, metadata, events):
+        infoHeader = ET.Element('?xml version="1.0" encoding="UTF-8"?')
         eventHeader = ET.Element("live_event")
-        nameHeader = ET.SubElement(eventHeader, "name").text = events[0]
-        for event in events[1:]:
+        nameHeader = ET.SubElement(eventHeader, "name").text = metadata['name']
+        for event in events:
             inputHeader = ET.SubElement(eventHeader, "input")
+            inputName = ET.SubElement(inputHeader, "name").text = event['uid']
             orderTag = ET.SubElement(inputHeader, "order").text = str(event['order'])
             fileHeader = ET.SubElement(inputHeader, "file_input")
             uriInfo = ET.SubElement(fileHeader, "uri").text = event['uri']
-            uidInfo = ET.SubElement(fileHeader, "certificate_file").text = event['uid']
         nodeInfo = ET.SubElement(eventHeader, "node_id").text = "3"
         profileInfo = ET.SubElement(eventHeader, "profile").text = "11"
-
-        liveXML = ET.ElementTree(eventHeader)
-        return liveXML
-
-    def writetofile(self, liveXML):
-        ET.ElementTree.write(liveXML, "testliveXML.xml")
+        return ET.ElementTree(eventHeader)
 
     def iteratetoSchedule(self, root):
         return root.find('.//BxfData/Schedule')
 
-    def parse(self, root):
+    def parseMetadata(self, root):
+        metadata = {}
+        metadata["name"] = root.find("./ScheduleName").text
+        return metadata
+
+    def parseEvents(self, root):
         events = []
-        events.append(root.find("./ScheduleName").text)
         i = 1
         for xmlevent in root.findall("./ScheduledEvent"):
             event = {}
-            event["order"] = i
             event["eventType"] = xmlevent.find("./EventData").attrib.get('eventType')
-            event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
             event["uid"] = xmlevent.find("./EventData/EventId/EventId").text
-            i = i + 1
+            event["order"] = i
+            event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
             events.append(event)
+            i += 1
         return events
 
-    def filetostring(self, aroot):
-        xmlstr = ET.tostring(aroot, encoding='utf8', method='xml')
-        return xmlstr
+    # Exclude all inputs except the subsequent n after the currently steaming video.
+    # @param n: Number of inputs to include in the live XML.
+    # @param events: List of all inputs in the BXF file.
+    # @param currentVideoUUID: UUID of the currently streaming video.
+    # @return: A list of the next n events or fewer.
+    def nextNevents(self, n, events, currentVideoUUID):
+        nextEvents = []
+        for i in range(len(events)):
+            if events[i]["uid"] == currentVideoUUID:
+                return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
+        return nextEvents
+
+    def filetostring(self, root):
+        return ET.tostring(root, encoding='utf8', method='xml')
 
     def stripNameSpace(self, xmlstr):
         it = ET.iterparse(StringIO(xmlstr))
         for _, el in it:
             if '}' in el.tag:
                 el.tag = el.tag.split('}', 1)[1]  # strip all namespaces
-        root = it.root
-        return root
+        return it.root
 
     def writetofile(self, liveXML):
-        ET.ElementTree.write(liveXML, "testbxfXML.xml")
+        ET.ElementTree.write(liveXML, "testLiveXML.xml", encoding='utf-8', xml_declaration=True)
