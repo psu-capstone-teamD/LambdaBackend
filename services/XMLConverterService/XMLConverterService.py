@@ -15,27 +15,35 @@ class XMLGenerator:
         return liveString
 
     def generateXML(self, metadata, events):
-        infoHeader = ET.Element('?xml version="1.0" encoding="UTF-8"?')
+        ET.Element('?xml version="1.0" encoding="UTF-8"?')
         eventHeader = ET.Element("live_event")
-        nameHeader = ET.SubElement(eventHeader, "name").text = metadata['name']
+        ET.SubElement(eventHeader, "name").text = metadata['name']
         for event in events:
             inputHeader = ET.SubElement(eventHeader, "input")
-            inputName = ET.SubElement(inputHeader, "name").text = event['uid']
-            orderTag = ET.SubElement(inputHeader, "order").text = str(event['order'])
+            ET.SubElement(inputHeader, "name").text = event['uid']
+            ET.SubElement(inputHeader, "order").text = str(event['order'])
             fileHeader = ET.SubElement(inputHeader, "file_input")
-            uriInfo = ET.SubElement(fileHeader, "uri").text = event['uri']
-        nodeInfo = ET.SubElement(eventHeader, "node_id").text = "3"
-        profileInfo = ET.SubElement(eventHeader, "profile").text = "11"
+            ET.SubElement(fileHeader, "uri").text = event['uri']
+        ET.SubElement(eventHeader, "node_id").text = "3"
+        ET.SubElement(eventHeader, "profile").text = "11"
         return ET.ElementTree(eventHeader)
 
     def iteratetoSchedule(self, root):
         return root.find('.//BxfData/Schedule')
 
+    # Extract all necessary metadata about the live event from the BXF file.
+    # @param root: The root element of the BXF tree.
+    # @return: A dictionary with a key for each piece of metadata.
     def parseMetadata(self, root):
         metadata = {}
         metadata["name"] = root.find("./ScheduleName").text
         return metadata
 
+    # Extract all events from the BXF file.
+    # @param root: The root element of the BXF tree.
+    # @return: A list of all video inputs. Each input is a dictionary
+    #          that includes information about the input, including the
+    #          UUID, order, URI, and event type.
     def parseEvents(self, root):
         events = []
         i = 1
@@ -49,17 +57,16 @@ class XMLGenerator:
             i += 1
         return events
 
-    # Exclude all inputs except the subsequent n after the currently steaming video.
+    # Exclude all inputs except the subsequent n after the currently streaming video.
     # @param n: Number of inputs to include in the live XML.
     # @param events: List of all inputs in the BXF file.
     # @param currentVideoUUID: UUID of the currently streaming video.
     # @return: A list of the next n events or fewer.
     def nextNevents(self, n, events, currentVideoUUID):
-        nextEvents = []
         for i in range(len(events)):
             if events[i]["uid"] == currentVideoUUID:
                 return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
-        return nextEvents
+        return []
 
     def filetostring(self, root):
         return ET.tostring(root, encoding='utf8', method='xml')
