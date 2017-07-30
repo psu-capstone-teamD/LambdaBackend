@@ -15,7 +15,6 @@ class XMLGenerator:
         return liveString
 
     def generateXML(self, metadata, events):
-        ET.Element('?xml version="1.0" encoding="UTF-8"?')
         eventHeader = ET.Element("live_event")
         ET.SubElement(eventHeader, "name").text = metadata['name']
         for event in events:
@@ -31,20 +30,23 @@ class XMLGenerator:
     def iteratetoSchedule(self, root):
         return root.find('.//BxfData/Schedule')
 
-    # Extract all necessary metadata about the live event from the BXF file.
-    # @param root: The root element of the BXF tree.
-    # @return: A dictionary with a key for each piece of metadata.
     def parseMetadata(self, root):
+        """
+        Extract all necessary metadata about the live event from the BXF file.
+        :param root: The root element of the BXF tree.
+        :return: A dictionary with a key for each piece of metadata.
+        """
         metadata = {}
         metadata["name"] = root.find("./ScheduleName").text
         return metadata
 
-    # Extract all events from the BXF file.
-    # @param root: The root element of the BXF tree.
-    # @return: A list of all video inputs. Each input is a dictionary
-    #          that includes information about the input, including the
-    #          UUID, order, URI, and event type.
     def parseEvents(self, root):
+        """
+        Extract all events from the BXF file.
+        :param root: The root element of the BXF tree.
+        :return: A list of all video inputs. Each input is a dictionary that includes
+        information about the input, including the UUID, order, URI, and event type.
+        """
         events = []
         i = 1
         for xmlevent in root.findall("./ScheduledEvent"):
@@ -57,18 +59,21 @@ class XMLGenerator:
             i += 1
         return events
 
-    # Exclude all inputs except the subsequent n after the currently streaming video.
-    # @param n: Number of inputs to include in the live XML.
-    # @param events: List of all inputs in the BXF file.
-    # @param currentVideoUUID: UUID of the currently streaming video.
-    # @return: A list of the next n events or fewer.
     def nextNevents(self, n, events, currentVideoUUID):
+        """
+        Exclude all inputs except the subsequent n after the currently streaming video.
+        :param n: Number of inputs to include in the live XML.
+        :param events: List of all inputs in the BXF file.
+        :param currentVideoUUID: UUID of the currently streaming video.
+        :return: A list of the next n events or fewer.
+        """
         for i in range(len(events)):
             if events[i]["uid"] == currentVideoUUID:
                 return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
         return []
 
     def filetostring(self, root):
+        """Returns a string representation of an XML tree element."""
         return ET.tostring(root, encoding='utf8', method='xml')
 
     def stripNameSpace(self, xmlstr):
