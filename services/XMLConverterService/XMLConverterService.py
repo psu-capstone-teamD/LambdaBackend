@@ -55,6 +55,10 @@ class XMLGenerator:
             event["uid"] = xmlevent.find("./EventData/EventId/EventId").text
             event["order"] = i
             event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
+            event["screenRes"] = xmlevent.find("./Content/Media/PrecompressedTS/TSVideo/Format").text
+            event["aspectRatio"] = xmlevent.find("./Content/Media/PrecompressedTS/TSVideo/AspectRatio").text
+            event["startMode"] = xmlevent.find("./EventData/StartMode").text
+            event["endMode"] = xmlevent.find("./EventData/EndMode").text
             events.append(event)
             i += 1
         return events
