@@ -1,2 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<live_event><name>WBCC_09072011_1315410574</name><input><name>urn:uuid:60d273d1-fcc5-474d-b518-5c54dc510699</name><order>3</order><file_input><uri>//s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/IMG_0593.MOV</uri></file_input></input><input><name>urn:uuid:b3c3e3fe-280c-43fd-830a-8abe838e6f8e</name><order>4</order><file_input><uri>//s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/IMG_0593.MOV</uri></file_input></input><node_id>3</node_id><profile>11</profile></live_event>
