@@ -63,11 +63,15 @@ class SchedulerController:
 
         #call justins method to return only 2 at a time
         #need time.sleep(0.5) after posting first event to getting live event info
-        
+
         results  = liveservice.createEvent(convertedxml)
         #get the Event ID from the returned xml
         root = ET.fromstring(results.content)
-        self.EVENT_ID = root.find('id').text
+        try:
+            self.EVENT_ID = root.find('id').text
+        except:
+            self.EVENT_ID = None
+
         return results
 
     def getLiveEvent(self):
