@@ -8,8 +8,10 @@ from services.XMLConverterService.XMLConverterService import XMLGenerator
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
+        self.livexmlstorage = 'livexmlstorage'
         self.s3service = S3Service()
         self.bxfFileName = 'bxffile.xml'
+        self.liveFileName = 'livefile.xml'
         self.EVENT_ID = None
 
     def inputxml(self, xml):
@@ -34,12 +36,8 @@ class SchedulerController:
         except Exception as e:
             return "StatusCode: 400: Failed to create Live Event"
 
-        while(True):
-            liveservice = LiveService()
-            if (self.EVENT_ID == None):
-                self.EVENT_ID = self.getCurrentEventId()
-
-            resultXML = liveservice.getLiveEventsByEventId(self.EVENT_ID)
+        '''while(True):
+            resultXML = self.getLiveEvent()
             elapsedTime = self.getElapsedInSeconds(resultXML)
             durationTime = self.getDurationInSeconds(resultXML)
             totalTimeLeft = elapsedTime - durationTime
@@ -54,7 +52,7 @@ class SchedulerController:
                 try:
                     self.updateLiveEvent(convertedxml)
                 except Exception as e:
-                    return "StatusCode: 400: Failed to update Live Event"
+                    return "StatusCode: 400: Failed to update Live Event"'''
 
     def storebxffile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
@@ -98,7 +96,7 @@ class SchedulerController:
         #check if event Id is set, otherwise get it from Live
         if (self.EVENT_ID == None):
             self.EVENT_ID = self.getCurrentEventId()
-        
+
         results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
         return results
 
@@ -110,58 +108,71 @@ class SchedulerController:
 
     def getCurrentEventId(self):
         live = LiveService()
-        results = live.getLiveEvents()
-        root = ET.fromstring(results.content)
-        child = root.find('live_event')
-        href = child.get('href')
-        #strip off the /live_events/ to just get the event number
-        event = href[13:]
+        try:
+            results = live.getLiveEvents()
+            root = ET.fromstring(results.content)
+            child = root.find('live_event')
+            href = child.get('href')
+            #strip off the /live_events/ to just get the event number
+            event = href[13:]
+        except Exception as e:
+            return "StatusCode: 400: Failed to get Current Event ID. Be sure that Event has been created"
         return event
 
     def getDurationInSeconds(self, xml_code):
-        root = ET.fromstring(xml_code.content)
-        totalDuration = 0
-        for input in root.iter('input'):
-            input_info = input.find('input_info')
-            general = input_info.find('general')
-            durationTag = general.find('duration')
-            duration = durationTag.text
-            #Strip the min and sec off of the time for the duration
-            digits = []
-            for i in duration:
-                if i.isdigit():
-                    digits.append(i)
-                if not i.isdigit():
-                    if i == ' ':
-                        continue
-                    if i == 's':
-                        strippedDuration = ''.join(digits)
-                        sec = int(strippedDuration)
-                        totalDuration = totalDuration + sec
-                        break
-                    if i == 'm':
-                        strippedDuration = ''.join(digits)
-                        min = int(strippedDuration)
-                        sec = 60 * min
-                        totalDuration = totalDuration + sec
-                        break
-        strippedDuration = str(totalDuration)
-        return strippedDuration
+        try:
+            root = ET.fromstring(xml_code.content)
+            totalDuration = 0
+            for input in root.iter('input'):
+                input_info = input.find('input_info')
+                general = input_info.find('general')
+                durationTag = general.find('duration')
+                duration = durationTag.text
+                #Strip the min and sec off of the time for the duration
+                digits = []
+                for i in duration:
+                    if i.isdigit():
+                        digits.append(i)
+                    if not i.isdigit():
+                        if i == ' ':
+                            continue
+                        if i == 's':
+                            strippedDuration = ''.join(digits)
+                            sec = int(strippedDuration)
+                            totalDuration = totalDuration + sec
+                            break
+                        if i == 'm':
+                            strippedDuration = ''.join(digits)
+                            min = int(strippedDuration)
+                            sec = 60 * min
+                            totalDuration = totalDuration + sec
+                            break
+            strippedDuration = str(totalDuration)
+            return strippedDuration
+        except:
+            return "StatusCode: 400: Failed to get Elapsed time."
 
     def getElapsedInSeconds(self, xml_code):
-        root = ET.fromstring(xml_code.content)
-        elapsedText = root.find('elapsed')
-        return elapsedText.text
+        try:
+            root = ET.fromstring(xml_code.content)
+            elapsedText = root.find('elapsed')
+            return elapsedText.text
+        except:
+            return "StatusCode: 400: Failed to get Elapsed time."
 
     def getLastUUID(self, xml_code):
-        root = ET.fromstring(xml_code.content)
-        uuids = []
-        for input in root.iter('input'):
-            file_input = input.find('file_input')
-            uuid = file_input.find('certificate_file')
-            uuid = uuid.text.replace("urn:uuid:", "")
-            uuids.append(uuid)
-        return uuids[-1]
+        try:
+            root = ET.fromstring(xml_code.content)
+            uuids = []
+            for input in root.iter('input'):
+                file_input = input.find('file_input')
+                uuid = file_input.find('certificate_file')
+                uuid = uuid.text.replace("urn:uuid:", "")
+                uuids.append(uuid)
+                result = uuids[-1]
+                return result
+        except:
+            return "StatusCode: 400: Failed to get last UUID."
 
     def getNextTwo(self, bxf, currentVideoUUID):
         if (not isinstance(currentVideoUUID, basestring)):
