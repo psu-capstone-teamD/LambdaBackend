@@ -7,11 +7,9 @@ from services.XMLConverterService.XMLConverterService import XMLGenerator
 
 class SchedulerController:
     def __init__(self):
-        self.livexmlstorage = 'livexmlstorage'
         self.bxfstorage = 'bxfstorage'
         self.s3service = S3Service()
         self.bxfFileName = 'bxffile.xml'
-        self.liveFileName = 'livefile.xml'
         self.EVENT_ID = None
 
     def inputxml(self, xml):
@@ -28,17 +26,35 @@ class SchedulerController:
         try:
             convertedxml = xmlConverterService.run(xml)
         except Exception as e:
-            return "StatusCode: 400: Not valid .xml structure"
-
-        # store the live xml to s3
-
-        liveBucketResponse = self.storelivefile(self.liveFileName, convertedxml)
-        if (liveBucketResponse["statusCode"] != '200'):
-            return liveBucketResponse
-
+            return "StatusCode: 400: Not valid .xml structure or could not be converted to Live .xml correctly"
 
         # send the live xml to Live
-        return self.sendToLive(convertedxml)
+        try:
+            self.createLiveEvent(convertedxml)
+        except Exception as e:
+            return "StatusCode: 400: Failed to create Live Event"
+
+        while(True):
+            liveservice = LiveService()
+            if (self.EVENT_ID == None):
+                self.EVENT_ID = self.getCurrentEventId()
+
+            resultXML = liveservice.getLiveEventsByEventId(self.EVENT_ID)
+            elapsedTime = self.getElapsedInSeconds(resultXML)
+            durationTime = self.getDurationInSeconds(resultXML)
+            totalTimeLeft = elapsedTime - durationTime
+            #check if time is less than 30 seconds
+            if(totalTimeLeft < 30):
+                try:
+                    convertedxml = xmlConverterService.run(xml)
+                except Exception as e:
+                    return "StatusCode: 400: Not valid .xml structure or could not be converted to Live .xml correctly"
+
+                # send the live xml to Live
+                try:
+                    self.updateLiveEvent(convertedxml)
+                except Exception as e:
+                    return "StatusCode: 400: Failed to update Live Event"
 
     def storebxffile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
@@ -55,16 +71,15 @@ class SchedulerController:
             return {'statusCode': '400', 'body': 'filename must be a string'}
         return self.s3service.getxml(self.livexmlstorage, filename)
 
-    def sendToLive(self, convertedxml):
+    def createLiveEvent(self, convertedxml):
         if (not isinstance(convertedxml, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
-        #send to LiveService
+
+        #send to LiveService to create Event
         liveservice = LiveService()
-
-        #call justins method to return only 2 at a time
-        #need time.sleep(0.5) after posting first event to getting live event info
-
         results  = liveservice.createEvent(convertedxml)
+        # need time.sleep(0.5) after posting first event to getting live event info otherwise info wont be correct
+        time.sleep(.05)
         #get the Event ID from the returned xml
         root = ET.fromstring(results.content)
         try:
@@ -72,6 +87,19 @@ class SchedulerController:
         except:
             self.EVENT_ID = None
 
+        return results
+
+    def updateLiveEvent(self, convertedxml):
+        if (not isinstance(convertedxml, basestring)):
+            return {'statusCode': '400', 'body': 'Not a valid string input'}
+
+        #send to LiveService
+        liveservice = LiveService()
+        #check if event Id is set, otherwise get it from Live
+        if (self.EVENT_ID == None):
+            self.EVENT_ID = self.getCurrentEventId()
+        
+        results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
         return results
 
     def getLiveEvent(self):
@@ -140,3 +168,5 @@ class SchedulerController:
             return {'statusCode': '400', 'body': 'Not a valid string input'}
         convertedxml = self.xmlConverterService.bxfToLiveUpdate(bxf, currentVideoUUID)
         return convertedxml
+
+
