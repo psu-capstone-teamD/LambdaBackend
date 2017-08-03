@@ -173,11 +173,3 @@ class SchedulerController:
                 return result
         except:
             return "StatusCode: 400: Failed to get last UUID."
-
-    def getNextTwo(self, bxf, currentVideoUUID):
-        if (not isinstance(currentVideoUUID, basestring)):
-            return {'statusCode': '400', 'body': 'Not a valid string input'}
-        convertedxml = self.xmlConverterService.bxfToLiveUpdate(bxf, currentVideoUUID)
-        return convertedxml
-
-
