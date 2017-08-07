@@ -13,6 +13,12 @@ class XMLGenerator:
         liveString = self.filetostring(liveXML.getroot())
         return liveString
 
+    def validateXML(self, bxf_xml):
+        try:
+            ET.fromstring(bxf_xml)
+        except ET.ParseError:
+            return "StatusCode: 400: Not valid .xml structure"
+
     def generateXML(self, metadata, events):
         eventHeader = ET.Element("live_event")
         ET.SubElement(eventHeader, "name").text = metadata['name']
