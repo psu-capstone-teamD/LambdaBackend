@@ -9,6 +9,5 @@ script:
   - python ./services/XMLConverterService/TestXMLConverterService.py
   - python TestSchedulerController.py
   # - python ./services/LiveService/testLiveService.py
-  - coverage report -m
-after_success:
-  coveralls
+  - coverage run schedulerController.py
+after_success: coveralls
