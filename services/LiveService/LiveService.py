@@ -18,8 +18,16 @@ class LiveService:
         endpoint = '/live_events' if not filter else '/live_events?filter=' + filter
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
-    def getEvent(self, eventID):
+    def getLiveEvent(self, eventID):
         endpoint = '/live_events/' + str(eventID)
+        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
+    def getLiveProfiles(self):
+        endpoint = '/live_event_profiles'
+        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
+    def getLiveProfile(self, profileID):
+        endpoint = '/live_event_profiles/' + str(profileID)
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def getSchedules(self):
@@ -34,6 +42,10 @@ class LiveService:
         endpoint = '/schedules'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
 
+    def createProfile(self, xml):
+        endpoint = '/live_event_profiles'
+        return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
+
     def updatePlaylist(self, eventID, xml):
         endpoint = '/live_events/' + str(eventID) + '/playlist'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
@@ -42,16 +54,16 @@ class LiveService:
         endpoint = '/schedules/' + str(schedID)
         return put(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
 
+    def updateProfile(self, profileID, xml):
+        endpoint = '/live_event_profiles/' + str(profileID)
+        return put(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
+
     def removeEvent(self, eventID):
         endpoint = '/live_events/' + str(eventID)
         return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def removeSchedule(self, schedID):
         endpoint = '/schedules/' + str(schedID)
-        return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
-
-    def removeInput(self, eventID, inputID):
-        endpoint = '/live_events/' + str(eventID) + '/inputs/' + str(inputID)
         return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def setHeaders(self, endpoint):
@@ -66,7 +78,7 @@ class LiveService:
         # Set the time for session to expire. Should be ~30 seconds in the future
         expiration = str(int(time()) + 30)
 
-        # discard endpoint parameters
+        # discard endpoint parameters if they are there
         endpoint = endpoint.split('?')[0]
 
         # Set the auth key using this algorithm:
