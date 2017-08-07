@@ -109,12 +109,19 @@ class SchedulerController:
         if(self.EVENT_ID == None):
             self.EVENT_ID = self.getCurrentEventId()
         live = LiveService()
-        return live.getLiveEventsByEventId(self.EVENT_ID)
+        return live.getLiveEvent(self.EVENT_ID)
+
+    def getLiveEventForFrontEnd(self):
+        live = LiveService()
+        pre = live.getLiveEvents("pre")
+        running = live.getLiveEvents("running")
+        results = pre + running
+        #parse through and return edited info
 
     def getCurrentEventId(self):
         live = LiveService()
         try:
-            results = live.getLiveEvents()
+            results = live.getAllLiveEvents()
             root = ET.fromstring(results.content)
             child = root.find('live_event')
             href = child.get('href')
