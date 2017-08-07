@@ -13,10 +13,16 @@ class SchedulerController:
         self.bxfFileName = 'bxffile.xml'
         self.liveFileName = 'livefile.xml'
         self.EVENT_ID = None
+        self.xmlError = 'StatusCode: 400: Not valid .xml structure'
 
     def inputxml(self, xml):
         if (not isinstance(xml, basestring)):
             return "StatusCode: 400: Not a valid string input"
+
+        # create instance of xml generator and check valid xml structure
+        xmlConverterService = XMLGenerator()
+        if xmlConverterService.validateXML(xml) == self.xmlError:
+            return self.xmlError
 
         # store the bxf.xml file to s3
         bxfBucketResponse = self.storebxffile(self.bxfFileName, xml)
@@ -24,11 +30,10 @@ class SchedulerController:
             return bxfBucketResponse
 
         # convert bxf to live xml
-        xmlConverterService = XMLGenerator()
         try:
             convertedxml = xmlConverterService.run(xml)
         except Exception as e:
-            return "StatusCode: 400: Not valid .xml structure or could not be converted to Live .xml correctly"
+            return self.xmlError
 
         # send the live xml to Live
         try:
@@ -173,3 +178,4 @@ class SchedulerController:
                 return result
         except:
             return "StatusCode: 400: Failed to get last UUID."
+

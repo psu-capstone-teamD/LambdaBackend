@@ -13,6 +13,13 @@ class XMLGenerator:
         liveString = self.filetostring(liveXML.getroot())
         return liveString
 
+    def validateXML(self, bxf_xml):
+        try:
+            ET.fromstring(bxf_xml)
+        except ET.ParseError:
+            return "StatusCode: 400: Not valid .xml structure"
+        return "StatusCode: 200"
+
     def generateXML(self, metadata, events):
         eventHeader = ET.Element("live_event")
         ET.SubElement(eventHeader, "name").text = metadata['name']
@@ -22,6 +29,14 @@ class XMLGenerator:
             ET.SubElement(inputHeader, "order").text = str(event['order'])
             fileHeader = ET.SubElement(inputHeader, "file_input")
             ET.SubElement(fileHeader, "uri").text = event['uri']
+
+            # Need to know exactly how the following information is used in the live XML. For now just adding it as
+            # a subelement of each individual input.
+
+            ET.SubElement(inputHeader, "screen_resolution").text = event['screenRes']
+            ET.SubElement(inputHeader, "aspect_ratio").text = event['aspectRatio']
+            ET.SubElement(inputHeader, "start_mode").text = event['startMode']
+            ET.SubElement(inputHeader, "end_mode").text = event['endMode']
         ET.SubElement(eventHeader, "node_id").text = "3"
         ET.SubElement(eventHeader, "profile").text = "11"
         return ET.ElementTree(eventHeader)
