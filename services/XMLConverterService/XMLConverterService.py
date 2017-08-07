@@ -18,6 +18,7 @@ class XMLGenerator:
             ET.fromstring(bxf_xml)
         except ET.ParseError:
             return "StatusCode: 400: Not valid .xml structure"
+        return "StatusCode: 200"
 
     def generateXML(self, metadata, events):
         eventHeader = ET.Element("live_event")
