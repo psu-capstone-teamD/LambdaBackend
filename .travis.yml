@@ -4,5 +4,10 @@ notifications:
 
 install: "pip install -r requirements.txt"
 
-script: python ./services/S3Service/TestS3Service.py
-script: python TestSchedulerController.py
+script: 
+  - python ./Tests/TestS3Service.py
+  - python ./Tests/TestXMLConverterService.py
+  - python TestSchedulerController.py
+  # - python ./Tests/LiveService/testLiveService.py
+  - coverage run --source=services TestSchedulerController.py
+after_success: coveralls
