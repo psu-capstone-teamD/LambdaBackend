@@ -1,10 +1,12 @@
 #!/usr/bin/python
-
+import sys
 import unittest
+sys.path.append('services/LiveService')
 from LiveService import LiveService
 
 
 L = LiveService()
+
 
 class LiveServiceTest(unittest.TestCase):
 
@@ -47,7 +49,6 @@ class LiveServiceTest(unittest.TestCase):
             xml = infile.read()
         resp = L.createSchedule(xml)
         self.assertEqual(resp.status_code, 422)
-
 
 
 if __name__ == '__main__':
