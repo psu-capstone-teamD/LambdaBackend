@@ -113,15 +113,42 @@ class SchedulerController:
 
     def getLiveEventForFrontEnd(self):
         live = LiveService()
-        pre = live.getLiveEvents("pre")
-        running = live.getLiveEvents("running")
-        results = pre + running
-        #parse through and return edited info
+        # check if event Id is set, otherwise get it from Live
+        if (self.EVENT_ID == None):
+            self.EVENT_ID = self.getCurrentEventId()
+
+        #get status which gives the current running input
+        status = live.getLiveEventStatus(self.EVENT_ID)
+        root = ET.fromstring(status.content)
+        active_input_id = root.find('active_input_id')
+
+        currentEventInfo = self.getLiveEvent()
+        try:
+            rootOfEvent = ET.fromstring(currentEventInfo.content)
+            uuidStringForPending = ""
+            flagForreachingCurrentVideo = False
+            for pendingInput in rootOfEvent.iter('input'):
+                idOfInput = pendingInput.find('id')
+                if (flagForreachingCurrentVideo == True):
+                    file_input = pendingInput.find('file_input')
+                    uuidTemp = file_input.find('certificate_file')
+                    pendingUuid = uuidTemp.text.replace("urn:uuid:", "")
+                    uuidStringForPending += pendingUuid + ","
+                if(idOfInput.text == active_input_id.text):
+                    file_input = pendingInput.find('file_input')
+                    uuidTemp = file_input.find('certificate_file')
+                    runningUuid = uuidTemp.text.replace("urn:uuid:", "")
+                    flagForreachingCurrentVideo = True
+        except:
+            uuidStringForPending = "No pending events"
+            runningUuid = "No running events"
+
+        return {'statusCode': '200', 'running': runningUuid, 'pending:': uuidStringForPending}
 
     def getCurrentEventId(self):
         live = LiveService()
         try:
-            results = live.getAllLiveEvents()
+            results = live.getLiveEvents(None)
             root = ET.fromstring(results.content)
             child = root.find('live_event')
             href = child.get('href')
@@ -132,6 +159,7 @@ class SchedulerController:
         return event
 
     def getDurationInSeconds(self, xml_code):
+        #Get duration from LIVE. Returns video duration rounded down to the minute.
         try:
             root = ET.fromstring(xml_code.content)
             totalDuration = 0
@@ -177,12 +205,11 @@ class SchedulerController:
             root = ET.fromstring(xml_code.content)
             uuids = []
             for input in root.iter('input'):
-                file_input = input.find('file_input')
-                uuid = file_input.find('certificate_file')
-                uuid = uuid.text.replace("urn:uuid:", "")
-                uuids.append(uuid)
+                inputFile = input.find('file_input')
+                uuidpending = inputFile.find('certificate_file')
+                pendingUuid = uuidpending.text.replace("urn:uuid:", "")
+                uuids.append(pendingUuid)
                 result = uuids[-1]
                 return result
         except:
             return "StatusCode: 400: Failed to get last UUID."
-
