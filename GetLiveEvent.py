@@ -15,9 +15,8 @@ def respond(err, res=None):
 
 
 def lambda_handler(event, context):
-    response = controller.getLiveEvent()
-
+    response = controller.getLiveEventForFrontEnd()
     try:
-        return respond(None, response.content)
+        return response
     except Exception as e:
         return respond(ValueError('Error: "{}"'.format(response)))
