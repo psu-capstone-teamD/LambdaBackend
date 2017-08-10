@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inputs>
+  <input>
+    <order>1</order>
+    <file_input>
+      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/IMG_1006.mov</uri>
+    </file_input>
+  </input>
+  <input>
+    <order>2</order>
+    <file_input>
+      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/KLM+Delft+Blue+House+92.mp4</uri>
+    </file_input>
+  </input>
+  <input>
+    <order>3</order>
+    <file_input>
+      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/Slack%2Bfor%2BiOS%2BUpload.mp4</uri>
+    </file_input>
+  </input>
+  <input>
+    <order>4</order>
+    <file_input>
+      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/KLMDelftbluehouse94DeOudheidkamer.mp4</uri>
+    </file_input>
+  </input>
+</inputs>

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <live_event>
-  <name>test_event</name>
+  <name>testX</name>
   <profile>test_profile</profile>
   <node_id>3</node_id>
   <input>
     <order>1</order>
     <file_input>
-      <uri>http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4</uri>
+      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</uri>
     </file_input>
   </input>
 </live_event>
