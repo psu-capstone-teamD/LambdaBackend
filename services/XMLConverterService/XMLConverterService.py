@@ -15,7 +15,10 @@ class XMLGenerator:
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
         metadata = self.parseMetadata(root)
-        events = self.nextNevents(2, self.parseEvents(root), None)
+        try:
+            events = self.nextNevents(2, self.parseEvents(root), None)
+        except RuntimeError:
+            return "Error"
         liveXML = self.generateSchedule(profileID, metadata, events)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
 
@@ -29,23 +32,22 @@ class XMLGenerator:
         """
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
-        events = self.nextNevents(2, self.parseEvents(root), currentVideoUUID)
+        try:
+            events = self.nextNevents(2, self.parseEvents(root), currentVideoUUID)
+        except RuntimeError:
+            return "Error"
         liveXML = self.generateUpdate(events)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
 
-    def convertProfile(self, bxfXML, videoUUID, profileName):
+    def convertProfile(self, bxfXML, profileName):
         """
         Create a new profile for one event in a BXF playlist. The returned
         XML can be used for creating new profiles or updating old ones.
         :param bxfXML: BXF file as a string.
-        :param videoUUID: UUID of one video input.
         :param profileNAme: Unique name for the profile.
         :return: XML for a live event profile.
         """
-        tree = ET.ElementTree(bxfXML)
-        root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
-        config = self.parseConfig(root, videoUUID)
-        liveXML = self.generateProfile(profileName, config)
+        liveXML = self.generateProfile(profileName)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
 
     def generateSchedule(self, profileID, metadata, events):
@@ -60,7 +62,7 @@ class XMLGenerator:
         ET.SubElement(eventHeader, "name").text = metadata['name']
         ET.SubElement(eventHeader, "node_id").text = "3"
         ET.SubElement(eventHeader, "profile").text = str(profileID)
-        ET.SubElement(eventHeader, "start_time").text = metadata['startTime'] # TODO use start and end modes
+        ET.SubElement(eventHeader, "start_time").text = metadata['startTime']  # TODO use start and end modes
         ET.SubElement(eventHeader, "end_time").text = metadata['endTime']
         for event in events:
             inputHeader = ET.SubElement(eventHeader, "input")
@@ -85,11 +87,10 @@ class XMLGenerator:
             ET.SubElement(fileHeader, "uri").text = input['uri']
         return ET.ElementTree(eventHeader)
 
-    def generateProfile(self, profileName, config):
+    def generateProfile(self, profileName):
         """
         Generate an XML tree for a live event profile.
         :param profileName: Unique name for the profile.
-        :param config: configurations for the aspect ratio and resolution.
         :return: Element tree object for the new profile.
         """
         profileHeader = ET.Element("live_event_profile")
@@ -101,10 +102,6 @@ class XMLGenerator:
         ET.SubElement(streamAssembly, "name").text = "SA1"
         videoDescription = ET.SubElement(streamAssembly, "video_description")
         ET.SubElement(videoDescription, "codec").text = "h.264"
-        ET.SubElement(videoDescription, "height").text = "1080"  #TODO adjust aspect ratio to width & height
-        ET.SubElement(videoDescription, "width").text = "1920"
-        h264Settings = ET.SubElement(videoDescription, "h264_settings")
-        ET.SubElement(h264Settings, "bitrate").text = "5000000"    #TODO convert resolution to bitrate
         outputGroup = ET.SubElement(profileHeader, "output_group")
         ET.SubElement(outputGroup, "type").text = "apple_live_group_settings"
         ALGsettings = ET.SubElement(outputGroup, "apple_live_group_settings")
@@ -150,20 +147,6 @@ class XMLGenerator:
             i += 1
         return events
 
-    def parseConfig(self, root, videoUUID):
-        """
-        Extract configurations for one selected video.
-        :param root: The root element of the BXF tree.
-        :param videoUUID: ID for the desired input.
-        :return: configurations for the video with the matching UUID
-        """
-        config = {}
-        for xmlevent in root.findall("./ScheduledEvent"):
-            if videoUUID == xmlevent.find("./EventData/EventId/EventId").text:
-                config["screenRes"] = xmlevent.find("./Content/Media/PrecompressedTS/TSVideo/Format").text
-                config["aspectRatio"] = xmlevent.find("./Content/Media/PrecompressedTS/TSVideo/AspectRatio").text
-        return config
-
     def nextNevents(self, n, events, currentVideoUUID):
         """
         Exclude all inputs except the subsequent n after the currently streaming video.
@@ -177,7 +160,6 @@ class XMLGenerator:
         for i in range(len(events)):
             if events[i]["uid"] == currentVideoUUID:
                 return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
-        # TODO throw error if video not found
         return []
 
     def iteratetoSchedule(self, root):
