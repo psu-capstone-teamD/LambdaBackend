@@ -2,7 +2,7 @@
 import sys
 import unittest
 sys.path.append('services/LiveService')
-from services.LiveService.LiveService import LiveService
+from LiveService import LiveService
 
 
 L = LiveService()
