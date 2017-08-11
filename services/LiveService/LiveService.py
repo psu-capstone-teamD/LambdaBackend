@@ -7,19 +7,20 @@ class LiveService:
     def __init__(self):
         self.BASEURL = "https://yanexx65s8e1.live.elementalclouddev.com/api"
 
+    def getStatus(self, eventID):
+        endpoint = '/live_events/' + str(eventID) + '/status'
+        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
     def getLiveEvents(self, filter):
-        """
-        Get a list of live events. Only one filter may be used. Set filter
-        to None to retrieve all events.
-        :param filter: List of filters include - pending, active, pre,
-                       running, post, complete, cancelled, error, archived.
-        :return: List of filtered live events.
-        """
         endpoint = '/live_events' if not filter else '/live_events?filter=' + filter
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def getLiveEvent(self, eventID):
         endpoint = '/live_events/' + str(eventID)
+        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
+    def getSchedules(self):
+        endpoint = '/schedules'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def getLiveProfiles(self):
@@ -28,10 +29,6 @@ class LiveService:
 
     def getLiveProfile(self, profileID):
         endpoint = '/live_event_profiles/' + str(profileID)
-        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
-
-    def getSchedules(self):
-        endpoint = '/schedules'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def createEvent(self, xml):
@@ -64,6 +61,10 @@ class LiveService:
 
     def removeSchedule(self, schedID):
         endpoint = '/schedules/' + str(schedID)
+        return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
+    def removeProfile(self, profileID):
+        endpoint = '/live_event_profiles/' + str(profileID)
         return delete(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def setHeaders(self, endpoint):
