@@ -181,3 +181,10 @@ class XMLGenerator:
 
     def writetofile(self, liveXML):
         ET.ElementTree.write(liveXML, "testLiveProfile.xml", encoding='utf-8', xml_declaration=True)
+
+    def validateXML(self, bxf_xml):
+        try:
+            ET.fromstring(bxf_xml)
+        except ET.ParseError:
+            return "StatusCode: 400: Not valid .xml structure"
+        return "StatusCode: 200"
