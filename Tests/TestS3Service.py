@@ -1,7 +1,7 @@
 import sys
 import unittest
 sys.path.append('services/S3Service')
-from services.S3Service.S3Service import S3Service
+from S3Service import S3Service
 
 
 class MyTestCase(unittest.TestCase):
