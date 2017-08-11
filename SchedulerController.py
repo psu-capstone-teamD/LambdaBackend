@@ -5,6 +5,7 @@ import time
 from services.XMLConverterService.XMLConverterService import XMLGenerator
 
 
+
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
@@ -121,11 +122,14 @@ class SchedulerController:
         status = live.getLiveEventStatus(self.EVENT_ID)
         root = ET.fromstring(status.content)
         active_input_id = root.find('active_input_id')
+        uuidStringForPending = "No pending events"
+        runningUuid = "No running events"
 
         currentEventInfo = self.getLiveEvent()
         try:
             rootOfEvent = ET.fromstring(currentEventInfo.content)
             uuidStringForPending = ""
+            runningUuid = ""
             flagForreachingCurrentVideo = False
             for pendingInput in rootOfEvent.iter('input'):
                 idOfInput = pendingInput.find('id')
@@ -139,11 +143,10 @@ class SchedulerController:
                     uuidTemp = file_input.find('certificate_file')
                     runningUuid = uuidTemp.text.replace("urn:uuid:", "")
                     flagForreachingCurrentVideo = True
-        except:
-            uuidStringForPending = "No pending events"
-            runningUuid = "No running events"
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not get uuids from event' + str(e)}
 
-        return {'statusCode': '200', 'running': runningUuid, 'pending:': uuidStringForPending}
+        return {'statusCode': '200', 'running': runningUuid, 'pending': uuidStringForPending}
 
     def getCurrentEventId(self):
         live = LiveService()
