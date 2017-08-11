@@ -143,6 +143,9 @@ class XMLGenerator:
             event["uid"] = xmlevent.find("./EventData/EventId/EventId").text
             event["order"] = i
             event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
+            event["startTime"]  = xmlevent.find("./EventData/StartDateTime/SmpteDateTime/SmpteTimeCode").text
+            event["duration"] = xmlevent.find("./EventData/LengthOption/Duration/SmpteDuration/SmpteTimeCode").text
+            event["endTime"] = event["startTime"] + event["duration"]
             events.append(event)
             i += 1
         return events
