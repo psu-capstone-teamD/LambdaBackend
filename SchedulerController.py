@@ -134,6 +134,12 @@ class SchedulerController:
             totalSeconds = seconds1 + seconds2
             self.totalDuration += (totalHours * 3600) + (totalMinutes * 60) + totalSeconds
 
+        try:
+            resultOfDelete = self.deleteLiveEvent()
+            return resultOfDelete
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not delete Live event, Error: ' + str(e) + resultOfUpdate.content}
+
     def storebxffile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
             return {'statusCode': '400', 'body': 'filename must be a string'}
@@ -148,6 +154,12 @@ class SchedulerController:
         if (not isinstance(filename, basestring)):
             return {'statusCode': '400', 'body': 'filename must be a string'}
         return self.s3service.getxml(self.livexmlstorage, filename)
+
+    def deleteLiveEvent(self):
+        liveservice = LiveService()
+        self.EVENT_ID = self.getCurrentEventId()
+        results = liveservice.removeEvent(self.EVENT_ID)
+        return results
 
     def createLiveSchedule(self, convertedXML):
         if (not isinstance(convertedXML, basestring)):
