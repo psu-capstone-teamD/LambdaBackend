@@ -1,4 +1,5 @@
 import unittest
+import sys
 sys.path.append('services/XMLConverterService')
 from XMLConverterService import XMLGenerator
 
