@@ -7,7 +7,7 @@ class LiveService:
     def __init__(self):
         self.BASEURL = "https://yanexx65s8e1.live.elementalclouddev.com/api"
 
-    def getStatus(self, eventID):
+    def getLiveEventStatus(self, eventID):
         endpoint = '/live_events/' + str(eventID) + '/status'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 

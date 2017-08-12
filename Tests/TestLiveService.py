@@ -1,7 +1,8 @@
 import unittest
 import requests_mock
 from mock import patch
-from services.LiveService.LiveService import LiveService
+sys.path.append('services/LiveService')
+from LiveService import LiveService
 
 
 L = LiveService()
@@ -20,9 +21,9 @@ class LiveServiceTest(unittest.TestCase):
                                    'Accept': 'application/xml'})
 
     @requests_mock.Mocker()
-    def testGetStatus(self, m):
+    def testGetLiveStatus(self, m):
         m.get(baseURL + "/live_events/150/status", status_code=200)
-        resp = L.getStatus(150)
+        resp = L.getLiveEventStatus(150)
         self.assertEqual(resp.status_code, 200)
 
     @requests_mock.Mocker()

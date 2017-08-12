@@ -1,5 +1,6 @@
 import unittest
-from services.XMLConverterService.XMLConverterService import XMLGenerator
+sys.path.append('services/XMLConverterService')
+from XMLConverterService import XMLGenerator
 
 
 class ConverterTests(unittest.TestCase):
