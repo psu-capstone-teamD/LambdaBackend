@@ -63,6 +63,13 @@ class SchedulerController:
             return {'statusCode': '400', "body": 'Could not Create Schedule in Live, Error: ' + str(e) + resultCreateSchedule.content}
 
         try:
+            resultOfStart = self.startLiveEvent()
+            if(resultOfStart.status_code != 200):
+                return {'statusCode': '400', "body": resultOfStart.content}
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e) + resultOfStart.content}
+
+        try:
             tree = ET.ElementTree(xml)
             root = xmlConverterService.iteratetoSchedule(xmlConverterService.stripNameSpace(tree.getroot()))
             self.listOfInputTimes = xmlConverterService.parseEvents(root)
@@ -159,6 +166,11 @@ class SchedulerController:
         liveservice = LiveService()
         self.EVENT_ID = self.getCurrentEventId()
         results = liveservice.removeEvent(self.EVENT_ID)
+        return results
+
+    def startLiveEvent(self):
+        liveservice = LiveService()
+        results = liveservice.startLiveEvent()
         return results
 
     def createLiveSchedule(self, convertedXML):

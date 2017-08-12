@@ -38,6 +38,10 @@ class LiveService:
         endpoint = '/schedules'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
+    def startLiveEvent(self, eventID):
+        endpoint = '/live_events/' + str(eventID) + '/start'
+        return post(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
     def createEvent(self, xml):
         endpoint = '/live_events'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
@@ -96,3 +100,4 @@ class LiveService:
                 "X-Auth-User": USER,
                 "X-Auth-Expires": expiration,
                 "X-Auth-Key": md5(string2).hexdigest()}
+
