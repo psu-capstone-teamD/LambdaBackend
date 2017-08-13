@@ -4,6 +4,14 @@ from StringIO import StringIO
 
 class XMLGenerator:
 
+    def convertEvent(self, bxfXML):
+
+        tree = ET.ElementTree(bxfXML)
+        root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
+        metadata = self.parsemetadata(root)
+        liveXML = self.generateEvent(metadata, events)
+        return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
+
     def convertSchedule(self, bxfXML, profileID):
         """
         Create a schedule in Live XML from a BXF file. This can be
@@ -49,6 +57,19 @@ class XMLGenerator:
         """
         liveXML = self.generateProfile(profileName)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
+
+    def generateEvent(self, metadata, events):
+        eventHeader = ET.Element("live_event")
+        ET.SubElement(eventHeader, "name").text = metadata['name']
+        for i in range(0, 1):
+            inputHeader = ET.SubElement(eventHeader, "input")
+            ET.SubElement(inputHeader, "name").text = events[i]['uid']
+            ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
+            fileHeader = ET.SubElement(inputHeader, "file_input")
+            ET.SubElement(fileHeader, "uri").text = events[i]['uri']
+        ET.SubElement(eventHeader, "node_id").text = "3"
+        ET.SubElement(eventHeader, "profile").text = "11"
+        return ET.ElementTree(eventHeader)
 
     def generateSchedule(self, profileID, metadata, events):
         """
