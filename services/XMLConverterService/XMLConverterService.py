@@ -9,6 +9,7 @@ class XMLGenerator:
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
         metadata = self.parsemetadata(root)
+        events = self.parseEvents(root)
         liveXML = self.generateEvent(metadata, events)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
 
