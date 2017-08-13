@@ -4,13 +4,13 @@ from StringIO import StringIO
 
 class XMLGenerator:
 
-    def convertEvent(self, bxfXML):
+    def convertEvent(self, bxfXML, profile_id):
 
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
-        metadata = self.parsemetadata(root)
+        metadata = self.parseMetadata(root)
         events = self.parseEvents(root)
-        liveXML = self.generateEvent(metadata, events)
+        liveXML = self.generateEvent(metadata, events, profile_id)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
 
     def convertSchedule(self, bxfXML, profileID):
@@ -59,17 +59,24 @@ class XMLGenerator:
         liveXML = self.generateProfile(profileName)
         return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
 
-    def generateEvent(self, metadata, events):
+    def generateEvent(self, metadata, events, profile_id):
         eventHeader = ET.Element("live_event")
         ET.SubElement(eventHeader, "name").text = metadata['name']
-        for i in range(0, 1):
+        if len(events) >= 2:
+            for i in range(2):
+                inputHeader = ET.SubElement(eventHeader, "input")
+                ET.SubElement(inputHeader, "name").text = events[i]['uid']
+                ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
+                fileHeader = ET.SubElement(inputHeader, "file_input")
+                ET.SubElement(fileHeader, "uri").text = events[i]['uri']
+        else:
             inputHeader = ET.SubElement(eventHeader, "input")
-            ET.SubElement(inputHeader, "name").text = events[i]['uid']
-            ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
+            ET.SubElement(inputHeader, "name").text = events[0]['uid']
+            ET.SubElement(inputHeader, "order").text = str(events[0]['order'])
             fileHeader = ET.SubElement(inputHeader, "file_input")
-            ET.SubElement(fileHeader, "uri").text = events[i]['uri']
+            ET.SubElement(fileHeader, "uri").text = events[0]['uri']
         ET.SubElement(eventHeader, "node_id").text = "3"
-        ET.SubElement(eventHeader, "profile").text = "11"
+        ET.SubElement(eventHeader, "profile").text = profile_id
         return ET.ElementTree(eventHeader)
 
     def generateSchedule(self, profileID, metadata, events):
