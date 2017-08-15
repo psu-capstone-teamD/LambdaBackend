@@ -100,4 +100,3 @@ class LiveService:
                 "X-Auth-User": USER,
                 "X-Auth-Expires": expiration,
                 "X-Auth-Key": md5(string2).hexdigest()}
-

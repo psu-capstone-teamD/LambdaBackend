@@ -3,6 +3,14 @@ from StringIO import StringIO
 
 
 class XMLGenerator:
+    def convertEvent(self, bxfXML, profile_id):
+
+        tree = ET.ElementTree(bxfXML)
+        root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
+        metadata = self.parseMetadata(root)
+        events = self.parseEvents(root)
+        liveXML = self.generateEvent(metadata, events, profile_id)
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def convertSchedule(self, bxfXML, profileID):
         """
@@ -20,7 +28,7 @@ class XMLGenerator:
         except RuntimeError:
             return "Error"
         liveXML = self.generateSchedule(profileID, metadata, events)
-        return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def convertUpdate(self, bxfXML, currentVideoUUID):
         """
@@ -33,11 +41,11 @@ class XMLGenerator:
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
         try:
-            events = self.nextNevents(2, self.parseEvents(root), currentVideoUUID)
+            events = self.nextNevents(1, self.parseEvents(root), currentVideoUUID)
         except RuntimeError:
             return "Error"
         liveXML = self.generateUpdate(events)
-        return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def convertProfile(self, bxfXML, profileName):
         """
@@ -48,7 +56,7 @@ class XMLGenerator:
         :return: XML for a live event profile.
         """
         liveXML = self.generateProfile(profileName)
-        return ET.tostring(liveXML.getroot(), encoding='utf8', method='xml')
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def generateSchedule(self, profileID, metadata, events):
         """
@@ -72,6 +80,26 @@ class XMLGenerator:
             ET.SubElement(fileHeader, "uri").text = event['uri']
         return ET.ElementTree(eventHeader)
 
+    def generateEvent(self, metadata, events, profile_id):
+        eventHeader = ET.Element("live_event")
+        ET.SubElement(eventHeader, "name").text = metadata['name']
+        if len(events) >= 2:
+            for i in range(2):
+                inputHeader = ET.SubElement(eventHeader, "input")
+                ET.SubElement(inputHeader, "name").text = events[i]['uid']
+                ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
+                fileHeader = ET.SubElement(inputHeader, "file_input")
+                ET.SubElement(fileHeader, "uri").text = events[i]['uri']
+        else:
+            inputHeader = ET.SubElement(eventHeader, "input")
+            ET.SubElement(inputHeader, "name").text = events[0]['uid']
+            ET.SubElement(inputHeader, "order").text = str(events[0]['order'])
+            fileHeader = ET.SubElement(inputHeader, "file_input")
+            ET.SubElement(fileHeader, "uri").text = events[0]['uri']
+        ET.SubElement(eventHeader, "node_id").text = "3"
+        ET.SubElement(eventHeader, "profile").text = profile_id
+        return ET.ElementTree(eventHeader)
+
     def generateUpdate(self, inputs):
         """
         Generates an XML tree for a live event playlist update.
@@ -79,12 +107,23 @@ class XMLGenerator:
         :return: ElementTree object for the playlist update.
         """
         eventHeader = ET.Element("inputs")
+        i = 1
         for input in inputs:
             inputHeader = ET.SubElement(eventHeader, "input")
             ET.SubElement(inputHeader, "order").text = str(input['order'])
             fileHeader = ET.SubElement(inputHeader, "file_input")
             ET.SubElement(fileHeader, "certificate_file").text = input['uid']
             ET.SubElement(fileHeader, "uri").text = input['uri']
+            videoSelector = ET.SubElement(inputHeader, "video_selector")
+            ET.SubElement(videoSelector, "name").text = "Capstone" + str(i)
+            ET.SubElement(videoSelector, "order").text = "1"
+            audioSelector = ET.SubElement(inputHeader, "audio_selector")
+            #ET.SubElement(audioSelector, "name").text = "audio_selector1"
+            #ET.SubElement(audioSelector, "default_selection").text = "false"
+            ET.SubElement(audioSelector, "order").text = "1"
+            ET.SubElement(audioSelector, "program_selection").text = "1"
+            ET.SubElement(audioSelector, "unwrap_smpte337").text = "true"
+            i += 1
         return ET.ElementTree(eventHeader)
 
     def generateProfile(self, profileName):
@@ -99,17 +138,43 @@ class XMLGenerator:
         ET.SubElement(failureRule, "priority").text = "50"
         ET.SubElement(failureRule, "restart_on_failure").text = "false"
         streamAssembly = ET.SubElement(profileHeader, "stream_assembly")
+        ET.SubElement(failureRule, "backup_rule").text = "none"
         ET.SubElement(streamAssembly, "name").text = "SA1"
         videoDescription = ET.SubElement(streamAssembly, "video_description")
+        ET.SubElement(videoDescription, "height").text = "720"
+        ET.SubElement(videoDescription, "width").text = "1280"
         ET.SubElement(videoDescription, "codec").text = "h.264"
+        h264 = ET.SubElement(videoDescription, "h264_settings")
+        ET.SubElement(h264, "framerate_denominator").text = "1"
+        ET.SubElement(h264, "framerate_follow_source").text = "false"
+        ET.SubElement(h264, "framerate_numerator").text = "30"
+        ET.SubElement(h264, "gop_size").text = "60.0"
+        ET.SubElement(h264, "par_denominator").text = "1"
+        ET.SubElement(h264, "par_follow_source").text = "false"
+        ET.SubElement(h264, "par_numerator").text = "1"
+        ET.SubElement(h264, "slices").text = "4"
+        ET.SubElement(h264, "level").text = "4.1"
+        videoPreProcessors = ET.SubElement(videoDescription, "video_preprocessors")
+        deinterlacer = ET.SubElement(videoPreProcessors, "deinterlacer")
+        ET.SubElement(deinterlacer, "algorithm").text = "interpolate"
+        ET.SubElement(deinterlacer, "deinterlace_mode").text = "Deinterlace"
+        ET.SubElement(deinterlacer, "force").text = "false"
+        ET.SubElement(h264, "bitrate").text = "2500000"
+        ET.SubElement(h264, "buf_size").text = "5000000"
+        audioDescription = ET.SubElement(streamAssembly, "audio_description")
+        ET.SubElement(audioDescription, "audio_source_name").text = "Audio Selector 1"
+        ET.SubElement(audioDescription, "audio_type").text = "0"
+        ET.SubElement(audioDescription, "follow_input_audio_type").text = "true"
+        ET.SubElement(audioDescription, "follow_input_language_code").text = "true"
+        ET.SubElement(audioDescription, "codec").text = "aac"
         outputGroup = ET.SubElement(profileHeader, "output_group")
         ET.SubElement(outputGroup, "type").text = "apple_live_group_settings"
         ALGsettings = ET.SubElement(outputGroup, "apple_live_group_settings")
         ET.SubElement(ALGsettings, "cdn").text = "Basic_PUT"
         destination = ET.SubElement(ALGsettings, "destination")
-        ET.SubElement(destination, "uri").text = "https://yanexx65s8e1.live.elementalclouddev.com/in_put/test"
+        ET.SubElement(destination, "uri").text = "http://delta-1-yanexx65s8e5.live.elementalclouddev.com/in_put/test"
         output = ET.SubElement(outputGroup, "output")
-        ET.SubElement(output, "name_modifier").text = "output1"
+        ET.SubElement(output, "name_modifier").text = "output"
         ET.SubElement(output, "stream_assembly_name").text = "SA1"
         ET.SubElement(output, "container").text = "m3u8"
         return ET.ElementTree(profileHeader)
@@ -122,8 +187,8 @@ class XMLGenerator:
         """
         metadata = {}
         metadata["name"] = root.find("./ScheduleName").text
-        metadata["startTime"] = root.attrib['scheduleStart']
-        metadata["endTime"] = root.attrib['scheduleEnd']
+        metadata["startTime"] = root.attrib['ScheduleStart']
+        metadata["endTime"] = root.attrib['ScheduleEnd']
         return metadata
 
     def parseEvents(self, root):
