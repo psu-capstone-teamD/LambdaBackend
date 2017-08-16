@@ -50,13 +50,13 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(self.converter.validateXML(
             good_xml), 'StatusCode: 200')
 
-    def testWriteToFile(self):
-        xml = "<?xml version='1.0' encoding='utf-8'?>\n<live_event>\n  <name>testX</name>\n  <profile>test_profile</profile>\n  <node_id>3</node_id>\n  <input>\n    <order>1</order>\n    <file_input>\n      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</uri>\n    </file_input>\n  </input>\n</live_event>"
-        root = ET.parse('Tests/test_XML/live_event.xml')
-        self.converter.writetofile(root)
-        with open('testliveProfile.xml') as f:
-            fileXml = f.read()
-        self.assertEqual(xml, fileXml)
+    # def testWriteToFile(self):
+    #     xml = "<?xml version='1.0' encoding='utf-8'?>\n<live_event>\n  <name>testX</name>\n  <profile>test_profile</profile>\n  <node_id>3</node_id>\n  <input>\n    <order>1</order>\n    <file_input>\n      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</uri>\n    </file_input>\n  </input>\n</live_event>"
+    #     root = ET.parse('Tests/test_XML/live_event.xml')
+    #     self.converter.writetofile(root)
+    #     with open('testliveProfile.xml') as f:
+    #         fileXml = f.read()
+    #     self.assertEqual(xml, fileXml)
 
     def testGenerateProfile(self):
         self.assertEqual(ET.tostring(self.converter.generateProfile(
