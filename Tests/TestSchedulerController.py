@@ -49,7 +49,8 @@ class MyTestCase(unittest.TestCase):
 
     def test_updatelive_right_data(self):
         schedControl = SchedulerController()
-        print(schedControl.updateLiveEvent("<android.support.design.widget.AppBarLayout><android.support.v7.widget.Toolbar/></android.support.design.widget.AppBarLayout>"))
+        print(schedControl.updateLiveEvent(
+            "<android.support.design.widget.AppBarLayout><android.support.v7.widget.Toolbar/></android.support.design.widget.AppBarLayout>"))
 
     def test_getlastuuid(self):
         schedControl = SchedulerController()
@@ -81,7 +82,8 @@ class MyTestCase(unittest.TestCase):
 
     def test_updatelive(self):
         schedControl = SchedulerController()
-        schedControl.updateLiveEvent("<android.support.design.widget.AppBarLayout><android.support.v7.widget.Toolbar/></android.support.design.widget.AppBarLayout>")
+        schedControl.updateLiveEvent(
+            "<android.support.design.widget.AppBarLayout><android.support.v7.widget.Toolbar/></android.support.design.widget.AppBarLayout>")
 
 
 if __name__ == '__main__':
