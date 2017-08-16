@@ -34,7 +34,7 @@ class SchedulerController:
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
 
-        #create a profile id to get the correct output and settings for event.
+        '''#create a profile id to get the correct output and settings for event.
         #set the profile id on return that has the settings for event
         try:
             profileXML = xmlConverterService.convertProfile(bxfXML=xml, profileName=self.profileName)
@@ -46,7 +46,7 @@ class SchedulerController:
                 return {'statusCode': '400', "body": profileResult.content}
             self.profileID = self.parseProfileID(profileResult)
         except Exception as e:
-            return {'statusCode': '400', "body": 'Could not Create Live Profile, Error: ' + str(e)}
+            return {'statusCode': '400', "body": 'Could not Create Live Profile, Error: ' + str(e)}'''
 
         #get the live xml from the bxf xml with the correct profile id
         try:
@@ -122,7 +122,7 @@ class SchedulerController:
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not convert .xml, Error: ' + str(e)}
                 try:
-                    resultOfUpdate = self.updateLiveEvent(xmlCode)
+                    resultOfUpdate = self.createLiveEvent(xmlCode)
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not update Live event, Error: ' + str(e)}
 
@@ -145,12 +145,13 @@ class SchedulerController:
 
             time.sleep(3)
 
-        #when all the videos are done playing, delete the event from Live
-        try:
-            resultOfDelete = self.deleteLiveEvent()
-            return resultOfDelete
-        except Exception as e:
-            return {'statusCode': '400', "body": 'Could not delete Live event, Error: ' + str(e)}
+        '''#when all the videos are done playing, delete the event from Live
+        if(self.getCurrentRunningEventID() == None):
+            try:
+                resultOfDelete = self.deleteLiveEvent()
+                return resultOfDelete
+            except Exception as e:
+                return {'statusCode': '400', "body": 'Could not delete Live event, Error: ' + str(e)}'''
 
     def storebxffile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
@@ -342,3 +343,18 @@ class SchedulerController:
             return "StatusCode: 400: Failed to get Current Event ID. Be sure that Event has been created"
 
         return event
+
+    def getCurrentRunningEventID(self):
+        live = LiveService()
+        try:
+            results = live.getLiveEvents("running")
+            root = ET.fromstring(results.content)
+            child = root.find('live_event')
+            href = child.get('href')
+            #strip off the /live_events/ to just get the event number
+            event = href[13:]
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
+        return event
+
+
