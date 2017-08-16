@@ -9,5 +9,5 @@ script:
   - python ./Tests/TestXMLConverterService.py
   - python TestSchedulerController.py
   # - python ./Tests/LiveService/testLiveService.py
-  - coverage run --source=services TestSchedulerController.py
+  - coverage run --omit=Tests/* -m unittest discover Tests
 after_success: coveralls

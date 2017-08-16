@@ -1,3 +1,4 @@
+import sys
 import unittest
 import requests_mock
 from mock import patch
@@ -124,7 +125,6 @@ class LiveServiceTest(unittest.TestCase):
         m.delete(baseURL + "/live_event_profiles/33", status_code=200)
         resp = L.removeProfile(33)
         self.assertEqual(resp.status_code, 200)
-
 
 
 if __name__ == '__main__':
