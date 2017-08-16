@@ -19,6 +19,10 @@ class LiveService:
         endpoint = '/live_events/' + str(eventID)
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
+
+    def getLiveEventStatus(self, eventID):
+        endpoint = '/live_events/' + str(eventID) + '/status'
+
     def getSchedules(self):
         endpoint = '/schedules'
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
@@ -30,6 +34,14 @@ class LiveService:
     def getLiveProfile(self, profileID):
         endpoint = '/live_event_profiles/' + str(profileID)
         return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
+    def getSchedules(self):
+        endpoint = '/schedules'
+        return get(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
+
+    def startLiveEvent(self, eventID):
+        endpoint = '/live_events/' + str(eventID) + '/start'
+        return post(self.BASEURL + endpoint, headers=self.setHeaders(endpoint))
 
     def createEvent(self, xml):
         endpoint = '/live_events'
