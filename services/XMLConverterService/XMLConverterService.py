@@ -12,6 +12,17 @@ class XMLGenerator:
         liveXML = self.generateEvent(metadata, events, profile_id)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
+    def nextEvent(self, bxfXML, uuid):
+        tree = ET.ElementTree(bxfXML)
+        root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
+        metadata = self.parseMetadata(root)
+        try:
+            events = self.nextNevents(1, self.parseEvents(root), uuid)
+        except RuntimeError:
+            return "Error"
+        liveXML = self.generateEvent(metadata, events, "11")
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
+
     def convertSchedule(self, bxfXML, profileID):
         """
         Create a schedule in Live XML from a BXF file. This can be

@@ -35,47 +35,61 @@ class SchedulerController:
         convertResult = self.convertSendStartInitialLiveEvent(xml)
         if (convertResult["statusCode"] != '200'):
             return convertResult
+
         setTimesResult = self.setListOfInputTimes(xml)
         if (setTimesResult["statusCode"] != '200'):
             return setTimesResult
+
         totalDurationResult = self.setInitialTotalDurationForTwoVideos()
         if (totalDurationResult["statusCode"] != '200'):
             return totalDurationResult
 
         flagEventFinished = True
-
-        while(flagEventFinished):
-            resultXML = self.getLiveEvent()
+        waitingToPlay = True
+        flagForLastPlay = True
+        while(flagEventFinished or flagForLastPlay):
+            runningEventID = self.getCurrentRunningEventID()
+            resultXML = self.getLiveEvent(runningEventID)
             elapsedTime = self.getElapsedInSeconds(resultXML)
+            print ("elapsed: " + elapsedTime)
+            print ("duration: " + str(self.totalDuration))
 
             #if seconds left on video is under 30, send another video up
-            if((self.totalDuration - int(elapsedTime)) < 30):
+            if((self.totalDuration - int(elapsedTime)) < 30 and waitingToPlay):
                 try:
-                    xmlCode = xmlConverterService.convertUpdate(xml, self.currentUUID)
-                    print xmlCode
+                    auuid = self.listOfInputTimes[self.indexOfCurrentUUID - 1].get('uid')
+                    xmlCode = xmlConverterService.nextEvent(xml, auuid)
+                    tempCheck = self.listOfInputTimes[self.indexOfCurrentUUID]
+                    if(tempCheck == None):
+                        flagEventFinished = False
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not convert .xml, Error: ' + str(e)}
                 try:
                     resultOfUpdate = self.createLiveEvent(xmlCode)
-                    #TODO Get Live event id for pending event
+                    waitingToPlay = False
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not update Live event, Error: ' + str(e)}
+
+
+
+            #play video when last video close to complete. This may take some tweaking depending on delay.
+            if ((self.totalDuration - int(elapsedTime)) < 2):
+                if(not flagEventFinished):
+                    flagForLastPlay = False
+                # start the event in Live
+                try:
+                    pendingEventID = self.getCurrentPendingEventID()
+                    resultOfStart = self.startLiveEvent(pendingEventID)
+                    waitingToPlay = True
+                    if (resultOfStart.status_code != 200):
+                        return {'statusCode': '400', "body": resultOfStart.content}
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e)}
 
                 try:
                     flagEventFinished = self.addToTotalDurationForOneVideo()
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not parse input duration times, Error: ' + str(e)}
-
-            #play video when last video close to complete. This may take some tweaking depending on delay.
-            if ((self.totalDuration - int(elapsedTime)) < 2):
-                # start the event in Live
-                try:
-                    #TODO put in EventId of pending event
-                    resultOfStart = self.startLiveEvent("10000000000")
-                    if (resultOfStart.status_code != 200):
-                        return {'statusCode': '400', "body": resultOfStart.content}
-                except Exception as e:
-                    return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e)}
 
             time.sleep(1)
 
@@ -83,7 +97,7 @@ class SchedulerController:
         xmlConverterService = XMLGenerator()
         # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml)
+            createEventXML = xmlConverterService.convertEvent(xml, "36")
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
@@ -97,7 +111,8 @@ class SchedulerController:
 
         # start the event in Live
         try:
-            resultOfStart = self.startLiveEvent()
+            self.EVENT_ID = self.getCurrentEventId()
+            resultOfStart = self.startLiveEvent(self.EVENT_ID)
             if (resultOfStart.status_code != 200):
                 return {'statusCode': '400', "body": resultOfStart.content}
         except Exception as e:
@@ -162,7 +177,7 @@ class SchedulerController:
             hours, minutes, seconds = map(int, duration2.split(':'))
             self.indexOfCurrentUUID += 1
 
-        self.totalDuration += (hours * 3600) + (minutes * 60) + seconds
+        self.totalDuration = (hours * 3600) + (minutes * 60) + seconds
         return flagToJumpOutOfLoop
 
     def storebxffile(self, filename, xml_file):
@@ -215,10 +230,9 @@ class SchedulerController:
         results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
         return results
 
-    def getLiveEvent(self):
-        self.EVENT_ID = self.getCurrentEventId()
+    def getLiveEvent(self, eventID):
         live = LiveService()
-        return live.getLiveEvent(self.EVENT_ID)
+        return live.getLiveEvent(eventID)
 
     def getLiveEventForFrontEnd(self):
         live = LiveService()
@@ -345,4 +359,17 @@ class SchedulerController:
             return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
         return event
 
+    def getCurrentPendingEventID(self):
+        #gets the event id of the most recent pending event
+        live = LiveService()
+        try:
+            results = live.getLiveEvents("pending")
+            root = ET.fromstring(results.content)
+            child = root.find('live_event')
+            href = child.get('href')
+            #strip off the /live_events/ to just get the event number
+            event = href[13:]
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
+        return event
 
