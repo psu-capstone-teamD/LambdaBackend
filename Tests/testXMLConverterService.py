@@ -50,6 +50,22 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(self.converter.validateXML(
             good_xml), 'StatusCode: 200')
 
+    def testconvertEvent(self):
+        with open('Tests/test_xml/BXFShort.xml') as f:
+            fileXml = f.read()
+        self.assertEqual(self.converter.convertEvent(fileXml, '4'), "<?xml version='1.0' encoding='UTF-8'?>\n<live_event><name>WBCC_09072011_1315410574</name><input><name>urn:uuid:058ff320-2044-4c71-9f90-f6ef3234f53a</name><order>1</order><file_input><uri>http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4</uri></file_input></input><input><name>urn:uuid:e618de18-9787-445f-ab4f-f0f7764ad1a7</name><order>2</order><file_input><uri>http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4</uri></file_input></input><node_id>3</node_id><profile>4</profile></live_event>")
+
+    def testconvertSchedule(self):
+        with open('Tests/test_xml/BXFShort.xml') as f:
+            fileXml = f.read()
+        self.assertEqual(self.converter.convertSchedule(fileXml, '4'), "<?xml version='1.0' encoding='UTF-8'?>\n<schedule><name>WBCC_09072011_1315410574</name><node_id>3</node_id><profile>4</profile><start_time>2011-09-07T00:00:00.00</start_time><end_time>2011-09-07T23:59:46.05</end_time><input><order>2</order><file_input><certificate_file>urn:uuid:e618de18-9787-445f-ab4f-f0f7764ad1a7</certificate_file><uri>http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4</uri></file_input></input><input><order>3</order><file_input><certificate_file>urn:uuid:60d273d1-fcc5-474d-b518-5c54dc510699</certificate_file><uri>http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4</uri></file_input></input></schedule>")
+
+    def testconvertUpdate(self):
+        with open('Tests/test_xml/BXFShort_pretty.xml') as f:
+            fileXml = f.read()
+        self.assertEqual(self.converter.convertUpdate(
+            fileXml, '058ff320-2044-4c71-9f90-f6ef3234f53a'), "<?xml version='1.0' encoding='UTF-8'?>\n<inputs />")
+
     # def testWriteToFile(self):
     #     xml = "<?xml version='1.0' encoding='utf-8'?>\n<live_event>\n  <name>testX</name>\n  <profile>test_profile</profile>\n  <node_id>3</node_id>\n  <input>\n    <order>1</order>\n    <file_input>\n      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</uri>\n    </file_input>\n  </input>\n</live_event>"
     #     root = ET.parse('Tests/test_XML/live_event.xml')
