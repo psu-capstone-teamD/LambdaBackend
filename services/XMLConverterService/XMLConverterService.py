@@ -41,7 +41,8 @@ class XMLGenerator:
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
         try:
-            events = self.nextNevents(1, self.parseEvents(root), currentVideoUUID)
+            events = self.nextNevents(
+                1, self.parseEvents(root), currentVideoUUID)
         except RuntimeError:
             return "Error"
         liveXML = self.generateUpdate(events)
@@ -58,26 +59,6 @@ class XMLGenerator:
         liveXML = self.generateProfile(profileName)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def generateEvent(self, metadata, events, profile_id):
-        eventHeader = ET.Element("live_event")
-        ET.SubElement(eventHeader, "name").text = metadata['name']
-        if len(events) >= 2:
-            for i in range(2):
-                inputHeader = ET.SubElement(eventHeader, "input")
-                ET.SubElement(inputHeader, "name").text = events[i]['uid']
-                ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
-                fileHeader = ET.SubElement(inputHeader, "file_input")
-                ET.SubElement(fileHeader, "uri").text = events[i]['uri']
-        else:
-            inputHeader = ET.SubElement(eventHeader, "input")
-            ET.SubElement(inputHeader, "name").text = events[0]['uid']
-            ET.SubElement(inputHeader, "order").text = str(events[0]['order'])
-            fileHeader = ET.SubElement(inputHeader, "file_input")
-            ET.SubElement(fileHeader, "uri").text = events[0]['uri']
-        ET.SubElement(eventHeader, "node_id").text = "3"
-        ET.SubElement(eventHeader, "profile").text = profile_id
-        return ET.ElementTree(eventHeader)
-
     def generateSchedule(self, profileID, metadata, events):
         """
         Generates an XML tree with all necessary tags for a schedule.
@@ -90,7 +71,8 @@ class XMLGenerator:
         ET.SubElement(eventHeader, "name").text = metadata['name']
         ET.SubElement(eventHeader, "node_id").text = "3"
         ET.SubElement(eventHeader, "profile").text = str(profileID)
-        ET.SubElement(eventHeader, "start_time").text = metadata['startTime']  # TODO use start and end modes
+        # TODO use start and end modes
+        ET.SubElement(eventHeader, "start_time").text = metadata['startTime']
         ET.SubElement(eventHeader, "end_time").text = metadata['endTime']
         for event in events:
             inputHeader = ET.SubElement(eventHeader, "input")
@@ -107,7 +89,8 @@ class XMLGenerator:
             for i in range(2):
                 inputHeader = ET.SubElement(eventHeader, "input")
                 ET.SubElement(inputHeader, "name").text = events[i]['uid']
-                ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
+                ET.SubElement(inputHeader, "order").text = str(
+                    events[i]['order'])
                 fileHeader = ET.SubElement(inputHeader, "file_input")
                 ET.SubElement(fileHeader, "uri").text = events[i]['uri']
         else:
@@ -174,7 +157,8 @@ class XMLGenerator:
         ET.SubElement(h264, "par_numerator").text = "1"
         ET.SubElement(h264, "slices").text = "4"
         ET.SubElement(h264, "level").text = "4.1"
-        videoPreProcessors = ET.SubElement(videoDescription, "video_preprocessors")
+        videoPreProcessors = ET.SubElement(
+            videoDescription, "video_preprocessors")
         deinterlacer = ET.SubElement(videoPreProcessors, "deinterlacer")
         ET.SubElement(deinterlacer, "algorithm").text = "interpolate"
         ET.SubElement(deinterlacer, "deinterlace_mode").text = "Deinterlace"
@@ -182,17 +166,21 @@ class XMLGenerator:
         ET.SubElement(h264, "bitrate").text = "2500000"
         ET.SubElement(h264, "buf_size").text = "5000000"
         audioDescription = ET.SubElement(streamAssembly, "audio_description")
-        ET.SubElement(audioDescription, "audio_source_name").text = "Audio Selector 1"
+        ET.SubElement(audioDescription,
+                      "audio_source_name").text = "Audio Selector 1"
         ET.SubElement(audioDescription, "audio_type").text = "0"
-        ET.SubElement(audioDescription, "follow_input_audio_type").text = "true"
-        ET.SubElement(audioDescription, "follow_input_language_code").text = "true"
+        ET.SubElement(audioDescription,
+                      "follow_input_audio_type").text = "true"
+        ET.SubElement(audioDescription,
+                      "follow_input_language_code").text = "true"
         ET.SubElement(audioDescription, "codec").text = "aac"
         outputGroup = ET.SubElement(profileHeader, "output_group")
         ET.SubElement(outputGroup, "type").text = "apple_live_group_settings"
         ALGsettings = ET.SubElement(outputGroup, "apple_live_group_settings")
         ET.SubElement(ALGsettings, "cdn").text = "Basic_PUT"
         destination = ET.SubElement(ALGsettings, "destination")
-        ET.SubElement(destination, "uri").text = "http://delta-1-yanexx65s8e5.live.elementalclouddev.com/in_put/test"
+        ET.SubElement(
+            destination, "uri").text = "http://delta-1-yanexx65s8e5.live.elementalclouddev.com/in_put/test"
         output = ET.SubElement(outputGroup, "output")
         ET.SubElement(output, "name_modifier").text = "output"
         ET.SubElement(output, "stream_assembly_name").text = "SA1"
@@ -222,14 +210,18 @@ class XMLGenerator:
         i = 1
         for xmlevent in root.findall("./ScheduledEvent"):
             event = {}
-            event["eventType"] = xmlevent.find("./EventData").attrib.get('eventType')
+            event["eventType"] = xmlevent.find(
+                "./EventData").attrib.get('eventType')
             event["startMode"] = xmlevent.find("./EventData/StartMode").text
             event["endMode"] = xmlevent.find("./EventData/EndMode").text
             event["uid"] = xmlevent.find("./EventData/EventId/EventId").text
             event["order"] = i
-            event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
-            event["startTime"]  = xmlevent.find("./EventData/StartDateTime/SmpteDateTime/SmpteTimeCode").text
-            event["duration"] = xmlevent.find("./EventData/LengthOption/Duration/SmpteDuration/SmpteTimeCode").text
+            event["uri"] = xmlevent.find(
+                "./Content/Media/MediaLocation/Location/AssetServer/PathName").text
+            event["startTime"] = xmlevent.find(
+                "./EventData/StartDateTime/SmpteDateTime/SmpteTimeCode").text
+            event["duration"] = xmlevent.find(
+                "./EventData/LengthOption/Duration/SmpteDuration/SmpteTimeCode").text
             event["endTime"] = event["startTime"] + event["duration"]
             events.append(event)
             i += 1
@@ -265,7 +257,8 @@ class XMLGenerator:
         return it.root
 
     def writetofile(self, liveXML):
-        ET.ElementTree.write(liveXML, "testLiveProfile.xml", encoding='utf-8', xml_declaration=True)
+        ET.ElementTree.write(liveXML, "testLiveProfile.xml",
+                             encoding='utf-8', xml_declaration=True)
 
     def validateXML(self, bxf_xml):
         try:

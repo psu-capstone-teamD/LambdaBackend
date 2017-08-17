@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import time
 import uuid
 
+
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
@@ -16,7 +17,9 @@ class SchedulerController:
         self.currentUUID = None
         self.livexmlstorage = 'livexmlstorage'
         self.s3service = S3Service()
-        self.bxfFileName = "year_" + time.strftime("%Y/month_%m/day%d") + "time_" + time.strftime("%H:%M:%S")
+        self.bxfFileName = "year_" + \
+            time.strftime("%Y/month_%m/day%d") + "time_" + \
+            time.strftime("%H:%M:%S")
         self.EVENT_ID = None
         self.xmlError = 'StatusCode: 400: Not valid .xml structure'
 
@@ -34,10 +37,11 @@ class SchedulerController:
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
 
-        #create a profile id to get the correct output and settings for event.
-        #set the profile id on return that has the settings for event
+        # create a profile id to get the correct output and settings for event.
+        # set the profile id on return that has the settings for event
         try:
-            profileXML = xmlConverterService.convertProfile(bxfXML=xml, profileName=self.profileName)
+            profileXML = xmlConverterService.convertProfile(
+                bxfXML=xml, profileName=self.profileName)
         except Exception as e:
             return self.xmlError
         try:
@@ -48,13 +52,14 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Create Live Profile, Error: ' + str(e)}
 
-        #get the live xml from the bxf xml with the correct profile id
+        # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml, self.profileID)
+            createEventXML = xmlConverterService.convertEvent(
+                xml, self.profileID)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
-        #create event in Live
+        # create event in Live
         try:
             resultCreateEvent = self.createLiveEvent(createEventXML)
             if(resultCreateEvent.status_code != 201):
@@ -62,7 +67,7 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Create Schedule in Live, Error: ' + str(e)}
 
-        #start the event in Live
+        # start the event in Live
         try:
             resultOfStart = self.startLiveEvent()
             if(resultOfStart.status_code != 200):
@@ -70,10 +75,12 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e)}
 
-        #get the start/end/duration times for each video from converter service
+        # get the start/end/duration times for each video from converter
+        # service
         try:
             tree = ET.ElementTree(xml)
-            root = xmlConverterService.iteratetoSchedule(xmlConverterService.stripNameSpace(tree.getroot()))
+            root = xmlConverterService.iteratetoSchedule(
+                xmlConverterService.stripNameSpace(tree.getroot()))
             self.listOfInputTimes = xmlConverterService.parseEvents(root)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get start/end times from BXF .xml, Error: ' + str(e)}
@@ -86,8 +93,10 @@ class SchedulerController:
         since the initial create event is sending 2 videos, this needs to happend 2 times.
         """
         try:
-            self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
-            duration1 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
+            self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get(
+                'uid')
+            duration1 = self.listOfInputTimes[self.indexOfCurrentUUID].get(
+                'duration')
             hours1, minutes1, seconds1 = map(int, duration1.split(':'))
             self.indexOfCurrentUUID += 1
             if(self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
@@ -95,8 +104,10 @@ class SchedulerController:
                 minutes2 = 0
                 seconds2 = 0
             if(self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
-                self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
-                duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
+                self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get(
+                    'uid')
+                duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get(
+                    'duration')
                 hours2, minutes2, seconds2 = map(int, duration2.split(':'))
                 self.indexOfCurrentUUID += 1
         except Exception as e:
@@ -105,7 +116,8 @@ class SchedulerController:
         totalHours = hours1 + hours2
         totalMinutes = minutes1 + minutes2
         totalSeconds = seconds1 + seconds2
-        self.totalDuration = (totalHours * 3600) + (totalMinutes * 60) + totalSeconds
+        self.totalDuration = (totalHours * 3600) + \
+            (totalMinutes * 60) + totalSeconds
 
         flagEventFinished = True
 
@@ -113,11 +125,12 @@ class SchedulerController:
             resultXML = self.getLiveEvent()
             elapsedTime = self.getElapsedInSeconds(resultXML)
 
-            #if seconds left on video is under 30, send another 2 videos up
+            # if seconds left on video is under 30, send another 2 videos up
             if((self.totalDuration - int(elapsedTime)) < 30):
-                print ("sending another video up")
+                print("sending another video up")
                 try:
-                    xmlCode = xmlConverterService.convertUpdate(xml, self.currentUUID)
+                    xmlCode = xmlConverterService.convertUpdate(
+                        xml, self.currentUUID)
                     print xmlCode
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not convert .xml, Error: ' + str(e)}
@@ -126,26 +139,29 @@ class SchedulerController:
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not update Live event, Error: ' + str(e)}
 
-                #get video times and add the video times to the duration total
+                # get video times and add the video times to the duration total
                 if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
                     hours2 = 0
                     minutes2 = 0
                     seconds2 = 0
                     flagEventFinished = False
                 if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
-                    self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
-                    duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
+                    self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get(
+                        'uid')
+                    duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get(
+                        'duration')
                     hours2, minutes2, seconds2 = map(int, duration2.split(':'))
                     self.indexOfCurrentUUID += 1
 
                 totalHours = hours1 + hours2
                 totalMinutes = minutes1 + minutes2
                 totalSeconds = seconds1 + seconds2
-                self.totalDuration += (totalHours * 3600) + (totalMinutes * 60) + totalSeconds
+                self.totalDuration += (totalHours * 3600) + \
+                    (totalMinutes * 60) + totalSeconds
 
             time.sleep(3)
 
-        #when all the videos are done playing, delete the event from Live
+        # when all the videos are done playing, delete the event from Live
         try:
             resultOfDelete = self.deleteLiveEvent()
             return resultOfDelete
@@ -198,12 +214,13 @@ class SchedulerController:
         if (not isinstance(convertedxml, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
 
-        #send to LiveService to create Event
+        # send to LiveService to create Event
         liveservice = LiveService()
-        results  = liveservice.createEvent(convertedxml)
-        # need time.sleep(0.5) after posting first event to getting live event info otherwise info wont be correct
+        results = liveservice.createEvent(convertedxml)
+        # need time.sleep(0.5) after posting first event to getting live event
+        # info otherwise info wont be correct
         time.sleep(.05)
-        #get the Event ID from the returned xml
+        # get the Event ID from the returned xml
         root = ET.fromstring(results.content)
         try:
             self.EVENT_ID = root.find('id').text
@@ -216,9 +233,9 @@ class SchedulerController:
         if (not isinstance(convertedxml, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
 
-        #send to LiveService
+        # send to LiveService
         liveservice = LiveService()
-        #get and set live event id
+        # get and set live event id
         self.EVENT_ID = self.getCurrentEventId()
 
         results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
@@ -232,10 +249,10 @@ class SchedulerController:
 
     def getLiveEventForFrontEnd(self):
         live = LiveService()
-        #Get Live Event
+        # Get Live Event
         self.EVENT_ID = self.getCurrentEventId()
 
-        #get status which gives the current running input
+        # get status which gives the current running input
         status = live.getLiveEventStatus(self.EVENT_ID)
         root = ET.fromstring(status.content)
         active_input_id = root.find('active_input_id')
@@ -270,14 +287,15 @@ class SchedulerController:
             root = ET.fromstring(results.content)
             child = root.find('live_event')
             href = child.get('href')
-            #strip off the /live_events/ to just get the event number
+            # strip off the /live_events/ to just get the event number
             event = href[13:]
         except Exception as e:
             return "StatusCode: 400: Failed to get Current Event ID. Be sure that Event has been created"
         return event
 
     def getDurationInSeconds(self, xml_code):
-        #Get duration from LIVE. Returns video duration rounded down to the minute.
+        # Get duration from LIVE. Returns video duration rounded down to the
+        # minute.
         try:
             root = ET.fromstring(xml_code.content)
             totalDuration = 0
@@ -286,7 +304,7 @@ class SchedulerController:
                 general = input_info.find('general')
                 durationTag = general.find('duration')
                 duration = durationTag.text
-                #Strip the min and sec off of the time for the duration
+                # Strip the min and sec off of the time for the duration
                 digits = []
                 for i in duration:
                     if i.isdigit():
