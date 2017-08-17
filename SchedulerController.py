@@ -9,20 +9,18 @@ class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
         self.profileName = str(uuid.uuid4())
-        self.profileID = None
         self.indexOfCurrentUUID = 0
         self.listOfInputTimes = []
         self.totalDuration = None
         self.currentUUID = None
-        self.livexmlstorage = 'livexmlstorage'
         self.s3service = S3Service()
         self.bxfFileName = "year_" + time.strftime("%Y/month_%m/day%d") + "time_" + time.strftime("%H:%M:%S")
         self.EVENT_ID = None
-        self.xmlError = 'StatusCode: 400: Not valid .xml structure'
+        self.xmlError = {'statusCode': '400', "body": 'Not valid xml structure'}
 
     def inputxml(self, xml):
         if (not isinstance(xml, basestring)):
-            return "StatusCode: 400: Not a valid string input"
+            return {'statusCode': '400', "body": 'input needs to be a string'}
 
         # create instance of xml generator and check valid xml structure
         xmlConverterService = XMLGenerator()
@@ -34,43 +32,82 @@ class SchedulerController:
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
 
-        '''#create a profile id to get the correct output and settings for event.
-        #set the profile id on return that has the settings for event
-        try:
-            profileXML = xmlConverterService.convertProfile(bxfXML=xml, profileName=self.profileName)
-        except Exception as e:
-            return self.xmlError
-        try:
-            profileResult = self.createLiveProfile(profileXML)
-            if(profileResult.status_code != 201):
-                return {'statusCode': '400', "body": profileResult.content}
-            self.profileID = self.parseProfileID(profileResult)
-        except Exception as e:
-            return {'statusCode': '400', "body": 'Could not Create Live Profile, Error: ' + str(e)}'''
+        convertResult = self.convertSendStartInitialLiveEvent(xml)
+        if (convertResult["statusCode"] != '200'):
+            return convertResult
+        setTimesResult = self.setListOfInputTimes(xml)
+        if (setTimesResult["statusCode"] != '200'):
+            return setTimesResult
+        totalDurationResult = self.setInitialTotalDurationForTwoVideos()
+        if (totalDurationResult["statusCode"] != '200'):
+            return totalDurationResult
 
-        #get the live xml from the bxf xml with the correct profile id
+        flagEventFinished = True
+
+        while(flagEventFinished):
+            resultXML = self.getLiveEvent()
+            elapsedTime = self.getElapsedInSeconds(resultXML)
+
+            #if seconds left on video is under 30, send another video up
+            if((self.totalDuration - int(elapsedTime)) < 30):
+                try:
+                    xmlCode = xmlConverterService.convertUpdate(xml, self.currentUUID)
+                    print xmlCode
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not convert .xml, Error: ' + str(e)}
+                try:
+                    resultOfUpdate = self.createLiveEvent(xmlCode)
+                    #TODO Get Live event id for pending event
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not update Live event, Error: ' + str(e)}
+
+                try:
+                    flagEventFinished = self.addToTotalDurationForOneVideo()
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not parse input duration times, Error: ' + str(e)}
+
+            #play video when last video close to complete. This may take some tweaking depending on delay.
+            if ((self.totalDuration - int(elapsedTime)) < 2):
+                # start the event in Live
+                try:
+                    #TODO put in EventId of pending event
+                    resultOfStart = self.startLiveEvent("10000000000")
+                    if (resultOfStart.status_code != 200):
+                        return {'statusCode': '400', "body": resultOfStart.content}
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e)}
+
+            time.sleep(1)
+
+    def convertSendStartInitialLiveEvent(self, xml):
+        xmlConverterService = XMLGenerator()
+        # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml, self.profileID)
+            createEventXML = xmlConverterService.convertEvent(xml)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
-        #create event in Live
+        # create event in Live
         try:
             resultCreateEvent = self.createLiveEvent(createEventXML)
-            if(resultCreateEvent.status_code != 201):
+            if (resultCreateEvent.status_code != 201):
                 return {'statusCode': '400', "body": resultCreateEvent.content}
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Create Schedule in Live, Error: ' + str(e)}
 
-        #start the event in Live
+        # start the event in Live
         try:
             resultOfStart = self.startLiveEvent()
-            if(resultOfStart.status_code != 200):
+            if (resultOfStart.status_code != 200):
                 return {'statusCode': '400', "body": resultOfStart.content}
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e)}
 
-        #get the start/end/duration times for each video from converter service
+        return {'statusCode': '200'}
+
+    def setListOfInputTimes(self, xml):
+        # get the start/end/duration times for each video from converter service
+        xmlConverterService = XMLGenerator()
         try:
             tree = ET.ElementTree(xml)
             root = xmlConverterService.iteratetoSchedule(xmlConverterService.stripNameSpace(tree.getroot()))
@@ -78,23 +115,26 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get start/end times from BXF .xml, Error: ' + str(e)}
 
+        return {'statusCode': '200'}
+
+    def setInitialTotalDurationForTwoVideos(self):
         """
-        get the duration of the first video
-        increment the index to the next uuid and get the second..
-        get duration of second video
-        the total is the duration of both so that we can find out how long the videos are running
-        since the initial create event is sending 2 videos, this needs to happend 2 times.
-        """
+                get the duration of the first video
+                increment the index to the next uuid and get the second..
+                get duration of second video
+                the total is the duration of both so that we can find out how long the videos are running
+                since the initial create event is sending 2 videos, this needs to happend 2 times.
+                """
         try:
             self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
             duration1 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
             hours1, minutes1, seconds1 = map(int, duration1.split(':'))
             self.indexOfCurrentUUID += 1
-            if(self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
+            if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
                 hours2 = 0
                 minutes2 = 0
                 seconds2 = 0
-            if(self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
+            if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
                 self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
                 duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
                 hours2, minutes2, seconds2 = map(int, duration2.split(':'))
@@ -106,77 +146,39 @@ class SchedulerController:
         totalMinutes = minutes1 + minutes2
         totalSeconds = seconds1 + seconds2
         self.totalDuration = (totalHours * 3600) + (totalMinutes * 60) + totalSeconds
+        return {'statusCode': '200'}
 
-        flagEventFinished = True
+    def addToTotalDurationForOneVideo(self):
+        # get video times and add the video times to the duration total
+        flagToJumpOutOfLoop = True
+        if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
+            hours2 = 0
+            minutes2 = 0
+            seconds2 = 0
+            flagToJumpOutOfLoop = False
+        if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
+            self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
+            duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
+            hours, minutes, seconds = map(int, duration2.split(':'))
+            self.indexOfCurrentUUID += 1
 
-        while(flagEventFinished):
-            resultXML = self.getLiveEvent()
-            elapsedTime = self.getElapsedInSeconds(resultXML)
-
-            #if seconds left on video is under 30, send another 2 videos up
-            if((self.totalDuration - int(elapsedTime)) < 30):
-                print ("sending another video up")
-                try:
-                    xmlCode = xmlConverterService.convertUpdate(xml, self.currentUUID)
-                    print xmlCode
-                except Exception as e:
-                    return {'statusCode': '400', "body": 'Could not convert .xml, Error: ' + str(e)}
-                try:
-                    resultOfUpdate = self.createLiveEvent(xmlCode)
-                except Exception as e:
-                    return {'statusCode': '400', "body": 'Could not update Live event, Error: ' + str(e)}
-
-                #get video times and add the video times to the duration total
-                if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
-                    hours2 = 0
-                    minutes2 = 0
-                    seconds2 = 0
-                    flagEventFinished = False
-                if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
-                    self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
-                    duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
-                    hours2, minutes2, seconds2 = map(int, duration2.split(':'))
-                    self.indexOfCurrentUUID += 1
-
-                totalHours = hours1 + hours2
-                totalMinutes = minutes1 + minutes2
-                totalSeconds = seconds1 + seconds2
-                self.totalDuration += (totalHours * 3600) + (totalMinutes * 60) + totalSeconds
-
-            time.sleep(3)
-
-        '''#when all the videos are done playing, delete the event from Live
-        if(self.getCurrentRunningEventID() == None):
-            try:
-                resultOfDelete = self.deleteLiveEvent()
-                return resultOfDelete
-            except Exception as e:
-                return {'statusCode': '400', "body": 'Could not delete Live event, Error: ' + str(e)}'''
+        self.totalDuration += (hours * 3600) + (minutes * 60) + seconds
+        return flagToJumpOutOfLoop
 
     def storebxffile(self, filename, xml_file):
         if (not isinstance(filename, basestring)):
             return {'statusCode': '400', 'body': 'filename must be a string'}
         return self.s3service.storexml(self.bxfstorage, filename=filename, xml_file=xml_file)
 
-    def storelivefile(self, filename, xml_file):
-        if (not isinstance(filename, basestring)):
-            return {'statusCode': '400', 'body': 'filename must be a string'}
-        return self.s3service.storexml(self.livexmlstorage, filename, xml_file)
-
-    def loadLiveFile(self, filename):
-        if (not isinstance(filename, basestring)):
-            return {'statusCode': '400', 'body': 'filename must be a string'}
-        return self.s3service.getxml(self.livexmlstorage, filename)
-
-    def deleteLiveEvent(self):
+    def deleteLiveEvent(self, eventID):
         liveservice = LiveService()
         self.EVENT_ID = self.getCurrentEventId()
-        results = liveservice.removeEvent(self.EVENT_ID)
+        results = liveservice.removeEvent(eventID)
         return results
 
-    def startLiveEvent(self):
+    def startLiveEvent(self, eventID):
         liveservice = LiveService()
-        results = liveservice.startLiveEvent(self.EVENT_ID)
+        results = liveservice.startLiveEvent(eventID)
         return results
 
     def createLiveSchedule(self, convertedXML):
@@ -198,32 +200,19 @@ class SchedulerController:
     def createLiveEvent(self, convertedxml):
         if (not isinstance(convertedxml, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
-
         #send to LiveService to create Event
         liveservice = LiveService()
         results  = liveservice.createEvent(convertedxml)
-        # need time.sleep(0.5) after posting first event to getting live event info otherwise info wont be correct
-        time.sleep(.05)
-        #get the Event ID from the returned xml
-        root = ET.fromstring(results.content)
-        try:
-            self.EVENT_ID = root.find('id').text
-        except:
-            self.EVENT_ID = None
-
         return results
 
     def updateLiveEvent(self, convertedxml):
         if (not isinstance(convertedxml, basestring)):
             return {'statusCode': '400', 'body': 'Not a valid string input'}
-
         #send to LiveService
         liveservice = LiveService()
         #get and set live event id
         self.EVENT_ID = self.getCurrentEventId()
-
         results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
-        print results.content
         return results
 
     def getLiveEvent(self):
@@ -274,7 +263,7 @@ class SchedulerController:
             #strip off the /live_events/ to just get the event number
             event = href[13:]
         except Exception as e:
-            return "StatusCode: 400: Failed to get Current Event ID. Be sure that Event has been created"
+            return {'statusCode': '400', 'body': 'Failed to get Current Event ID. Be sure that Event has been created Error: ' + str(e)}
         return event
 
     def getDurationInSeconds(self, xml_code):
@@ -308,16 +297,16 @@ class SchedulerController:
                             break
             strippedDuration = str(totalDuration)
             return strippedDuration
-        except:
-            return "StatusCode: 400: Failed to get Elapsed time."
+        except Exception as e:
+            return {'statusCode': '400','body': 'Failed to get Elapsed time. Error: ' + str(e)}
 
     def getElapsedInSeconds(self, xml_code):
         try:
             root = ET.fromstring(xml_code.content)
             elapsedText = root.find('elapsed')
             return elapsedText.text
-        except:
-            return "StatusCode: 400: Failed to get Elapsed time."
+        except Exception as e:
+            return {'statusCode': '400','body': 'Failed to get Elapsed time. Error: ' + str(e)}
 
     def getLastUUID(self, xml_code):
         try:
@@ -330,8 +319,8 @@ class SchedulerController:
                 uuids.append(pendingUuid)
                 result = uuids[-1]
                 return result
-        except:
-            return "StatusCode: 400: Failed to get last UUID."
+        except Exception as e:
+            return {'statusCode': '400', 'body': 'Failed to get last UUID. Error: ' + str(e)}
 
     def parseProfileID(self, xml_code):
         try:
@@ -340,8 +329,7 @@ class SchedulerController:
             # strip off the /live_events_profile/ to just get the event number
             event = href[21:]
         except Exception as e:
-            return "StatusCode: 400: Failed to get Current Event ID. Be sure that Event has been created"
-
+            return {'statusCode': '400', 'body': 'Failed to get Profile ID. Error: ' + str(e)}
         return event
 
     def getCurrentRunningEventID(self):
