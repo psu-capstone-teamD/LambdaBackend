@@ -18,17 +18,17 @@ class MyTestCase(unittest.TestCase):
 
     def test_inputxml_wrong_filetype(self):
         schedControl = SchedulerController()
-        print(schedControl.inputxml(1))
+        print(schedControl.inputxml(1, "path"))
 
     def test_inputxml_wrong_filetype_string(self):
         schedControl = SchedulerController()
         print(schedControl.inputxml(
-            "<android.support.design.widget.AppBarLayout><android.support.v7.widget.Toolbar/></android.support.design.widget.AppBarLayout>"))
+            "<android.support.design.widget.AppBarLayout><android.support.v7.widget.Toolbar/></android.support.design.widget.AppBarLayout>", "path"))
 
     def test_inputxml_is_filetype(self):
         schedControl = SchedulerController()
         data = "This is some data to put into s3"
-        print(schedControl.inputxml(data))
+        print(schedControl.inputxml(data, "path"))
 
     def test_updatelive_wrong_data(self):
         schedControl = SchedulerController()
@@ -64,7 +64,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_getliveevent(self):
         schedControl = SchedulerController()
-        print(schedControl.getLiveEvent())
+        print(schedControl.getLiveEvent("343"))
 
     def test_updatelive(self):
         schedControl = SchedulerController()
