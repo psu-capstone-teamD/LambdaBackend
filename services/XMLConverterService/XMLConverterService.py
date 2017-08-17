@@ -3,7 +3,7 @@ from StringIO import StringIO
 
 
 class XMLGenerator:
-    def convertEvent(self, bxfXML, profile_id):
+    def convertEvent(self, bxfXML, profile_id, output_path):
 
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
@@ -12,7 +12,7 @@ class XMLGenerator:
         liveXML = self.generateEvent(metadata, events, profile_id)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def nextEvent(self, bxfXML, uuid):
+    def nextEvent(self, bxfXML, uuid, output_path):
         tree = ET.ElementTree(bxfXML)
         root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
         metadata = self.parseMetadata(root)

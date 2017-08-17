@@ -8,6 +8,7 @@ import uuid
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
+        self.outPutPath = None
         self.profileName = str(uuid.uuid4())
         self.indexOfCurrentUUID = 0
         self.listOfInputTimes = []
@@ -18,9 +19,13 @@ class SchedulerController:
         self.EVENT_ID = None
         self.xmlError = {'statusCode': '400', "body": 'Not valid xml structure'}
 
-    def inputxml(self, xml):
+    def inputxml(self, xml, output_path):
         if (not isinstance(xml, basestring)):
             return {'statusCode': '400', "body": 'input needs to be a string'}
+        if (not isinstance(output_path, basestring)):
+            return {'statusCode': '400', "body": 'input needs to be a string'}
+
+        self.outPutPath = output_path
 
         # create instance of xml generator and check valid xml structure
         xmlConverterService = XMLGenerator()
@@ -58,7 +63,7 @@ class SchedulerController:
             if((self.totalDuration - int(elapsedTime)) < 30 and waitingToPlay):
                 try:
                     auuid = self.listOfInputTimes[self.indexOfCurrentUUID - 1].get('uid')
-                    xmlCode = xmlConverterService.nextEvent(xml, auuid)
+                    xmlCode = xmlConverterService.nextEvent(xml, auuid, self.outPutPath)
                     tempCheck = self.listOfInputTimes[self.indexOfCurrentUUID]
                     if(tempCheck == None):
                         flagEventFinished = False
@@ -97,7 +102,7 @@ class SchedulerController:
         xmlConverterService = XMLGenerator()
         # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml, "36")
+            createEventXML = xmlConverterService.convertEvent(xml, "36", self.outPutPath)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
