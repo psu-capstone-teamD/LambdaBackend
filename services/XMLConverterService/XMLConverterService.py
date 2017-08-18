@@ -80,12 +80,14 @@ class XMLGenerator:
                 ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
                 fileHeader = ET.SubElement(inputHeader, "file_input")
                 ET.SubElement(fileHeader, "uri").text = events[i]['uri']
+                ET.SubElement(fileHeader, "certificate_file").text = events[i]['uid']
         else:
             inputHeader = ET.SubElement(eventHeader, "input")
             ET.SubElement(inputHeader, "name").text = events[0]['uid']
             ET.SubElement(inputHeader, "order").text = str(events[0]['order'])
             fileHeader = ET.SubElement(inputHeader, "file_input")
             ET.SubElement(fileHeader, "uri").text = events[0]['uri']
+            ET.SubElement(fileHeader, "certificate_file").text = events[0]['uid']
         ET.SubElement(eventHeader, "node_id").text = "3"
         ET.SubElement(eventHeader, "profile").text = profile_id
         return ET.ElementTree(eventHeader)

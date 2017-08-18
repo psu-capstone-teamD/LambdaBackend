@@ -65,6 +65,28 @@ class SchedulerController:
             resultXML = self.getLiveEvent(runningEventID)
             elapsedTime = self.getElapsedInSeconds(resultXML)
 
+            #check if elapsed time has gone over. If so, try playing video again
+            if(not isinstance(int(elapsedTime), int)):
+                if (not flagEventFinished):
+                    flagForLastPlay = False
+                    # start the event in Live
+                try:
+                    pendingEventID = self.getCurrentPendingEventID()
+                    resultOfStart = self.startLiveEvent(pendingEventID)
+                    waitingToPlay = True
+                    if (resultOfStart.status_code != 200):
+                        return {'statusCode': '400', "body": resultOfStart.content}
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not start Live Event, Error: ' + str(e)}
+
+                try:
+                    flagEventFinished = self.addToTotalDurationForOneVideo()
+                except Exception as e:
+                    return {'statusCode': '400', "body": 'Could not parse input duration times, Error: ' + str(e)}
+
+                continue
+
+
             #if seconds left on video is under 30, send another video up
             if((self.totalDuration - int(elapsedTime)) < self.secondsLeftSendingNextVideo and waitingToPlay):
                 try:
@@ -374,4 +396,3 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
         return event
-
