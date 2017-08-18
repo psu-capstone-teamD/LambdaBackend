@@ -248,37 +248,39 @@ class SchedulerController:
         return live.getLiveEvent(self.EVENT_ID)
 
     def getLiveEventForFrontEnd(self):
+        """
+        Retrieves the currently running event and a list of all the pending events.
+        Assumes that there is only one running event besides the one named "Redirect"
+        and there is one video per event. UUID is found under the certificate_file tag
+        in the input section.
+        :return: UUIDs for the running event and a comma-separated
+                 list of all the pending events.
+        """
         live = LiveService()
-        # Get Live Event
-        self.EVENT_ID = self.getCurrentEventId()
 
-        # get status which gives the current running input
-        status = live.getLiveEventStatus(self.EVENT_ID)
-        root = ET.fromstring(status.content)
-        active_input_id = root.find('active_input_id')
-
-        currentEventInfo = self.getLiveEvent()
         try:
-            rootOfEvent = ET.fromstring(currentEventInfo.content)
-            uuidStringForPending = ""
-            runningUuid = ""
-            flagForreachingCurrentVideo = False
-            for pendingInput in rootOfEvent.iter('input'):
-                idOfInput = pendingInput.find('id')
-                if (flagForreachingCurrentVideo == True):
-                    file_input = pendingInput.find('file_input')
-                    uuidTemp = file_input.find('certificate_file')
-                    pendingUuid = uuidTemp.text.replace("urn:uuid:", "")
-                    uuidStringForPending += pendingUuid + ","
-                if(idOfInput.text == active_input_id.text):
-                    file_input = pendingInput.find('file_input')
-                    uuidTemp = file_input.find('certificate_file')
-                    runningUuid = uuidTemp.text.replace("urn:uuid:", "")
-                    flagForreachingCurrentVideo = True
-        except Exception as e:
-            return {'statusCode': '400', "body": 'Could not get uuids from event or no running event' + str(e)}
+            # Extract the UUID for the running event
+            runningEventUUID = ''
+            runningEvent = live.getLiveEvents('running')
+            root = ET.fromstring(runningEvent.content)
+            for event in root.iter('live_event'):
+                if (event.find('name')).text != 'Redirect':
+                    tempID = event.find('certificate_file')
+                    runningEventUUID = tempID.text.replace("urn:uuid:", "")
 
-        return {'statusCode': '200', 'running': runningUuid, 'pending': uuidStringForPending}
+            # Concatenate all pending event UUIDs in a comma-separated list
+            pendingEventUUIDs = ''
+            pendingEvents = live.getLiveEvents('pending')
+            root = ET.fromstring(pendingEvents.content)
+            for event in root.iter('live_event'):
+                tempID = event.find('certificate_file')
+                pendingEventUUIDs += tempID.text.replace("urn:uuid:", "")
+                pendingEventUUIDs += ','
+
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not get UUIDs from running or pending events' + str(e)}
+
+        return {'statusCode': '200', 'running': runningEventUUID, 'pending': pendingEventUUIDs}
 
     def getCurrentEventId(self):
         live = LiveService()
