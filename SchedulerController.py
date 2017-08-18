@@ -45,10 +45,12 @@ class SchedulerController:
         if (setTimesResult["statusCode"] != '200'):
             return setTimesResult
 
-        totalDurationResult = self.setInitialTotalDurationForTwoVideos()
+        totalDurationResult = self.setInitialTotalDuration()
         if (totalDurationResult["statusCode"] != '200'):
             return totalDurationResult
 
+        #Need to put in a delay otherwise it won't give Live enough time to start and elapsedTime will be initially off.
+        time.sleep(1)
         flagEventFinished = True
         waitingToPlay = True
         flagForLastPlay = True
@@ -137,44 +139,33 @@ class SchedulerController:
 
         return {'statusCode': '200'}
 
-    def setInitialTotalDurationForTwoVideos(self):
+    def setInitialTotalDuration(self):
         """
                 get the duration of the first video
                 increment the index to the next uuid and get the second..
-                get duration of second video
-                the total is the duration of both so that we can find out how long the videos are running
-                since the initial create event is sending 2 videos, this needs to happend 2 times.
-                """
+        """
         try:
             self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
             duration1 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
-            hours1, minutes1, seconds1 = map(int, duration1.split(':'))
+            hours, minutes, seconds = map(int, duration1.split(':'))
             self.indexOfCurrentUUID += 1
             if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
-                hours2 = 0
-                minutes2 = 0
-                seconds2 = 0
-            if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
-                self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
-                duration2 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
-                hours2, minutes2, seconds2 = map(int, duration2.split(':'))
-                self.indexOfCurrentUUID += 1
+                hours = 0
+                minutes = 0
+                seconds = 0
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not parse input duration times, Error: ' + str(e)}
 
-        totalHours = hours1 + hours2
-        totalMinutes = minutes1 + minutes2
-        totalSeconds = seconds1 + seconds2
-        self.totalDuration = (totalHours * 3600) + (totalMinutes * 60) + totalSeconds
+        self.totalDuration = (hours * 3600) + (minutes * 60) + seconds
         return {'statusCode': '200'}
 
     def addToTotalDurationForOneVideo(self):
         # get video times and add the video times to the duration total
         flagToJumpOutOfLoop = True
         if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
-            hours2 = 0
-            minutes2 = 0
-            seconds2 = 0
+            hours = 0
+            minutes = 0
+            seconds = 0
             flagToJumpOutOfLoop = False
         if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') != None):
             self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
@@ -377,4 +368,3 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
         return event
-

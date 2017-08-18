@@ -72,8 +72,8 @@ class XMLGenerator:
     def generateEvent(self, metadata, events, profile_id):
         eventHeader = ET.Element("live_event")
         ET.SubElement(eventHeader, "name").text = metadata['name']
-        if len(events) >= 2:
-            for i in range(2):
+        if len(events) >= 1:
+            for i in range(1):
                 inputHeader = ET.SubElement(eventHeader, "input")
                 ET.SubElement(inputHeader, "name").text = events[i]['uid']
                 ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
@@ -109,26 +109,6 @@ class XMLGenerator:
             fileHeader = ET.SubElement(inputHeader, "file_input")
             ET.SubElement(fileHeader, "certificate_file").text = event['uid']
             ET.SubElement(fileHeader, "uri").text = event['uri']
-        return ET.ElementTree(eventHeader)
-
-    def generateEvent(self, metadata, events, profile_id):
-        eventHeader = ET.Element("live_event")
-        ET.SubElement(eventHeader, "name").text = metadata['name']
-        if len(events) >= 2:
-            for i in range(2):
-                inputHeader = ET.SubElement(eventHeader, "input")
-                ET.SubElement(inputHeader, "name").text = events[i]['uid']
-                ET.SubElement(inputHeader, "order").text = str(events[i]['order'])
-                fileHeader = ET.SubElement(inputHeader, "file_input")
-                ET.SubElement(fileHeader, "uri").text = events[i]['uri']
-        else:
-            inputHeader = ET.SubElement(eventHeader, "input")
-            ET.SubElement(inputHeader, "name").text = events[0]['uid']
-            ET.SubElement(inputHeader, "order").text = str(events[0]['order'])
-            fileHeader = ET.SubElement(inputHeader, "file_input")
-            ET.SubElement(fileHeader, "uri").text = events[0]['uri']
-        ET.SubElement(eventHeader, "node_id").text = "3"
-        ET.SubElement(eventHeader, "profile").text = profile_id
         return ET.ElementTree(eventHeader)
 
     def generateUpdate(self, inputs):
