@@ -5,9 +5,13 @@ import xml.etree.ElementTree as ET
 import time
 import uuid
 
+
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
+        self.profileNumber = '36'
+        self.secondsLeftSendingNextVideo = 30
+        self.secondsLeftPlayingNextVideo = 2
         self.outPutPath = None
         self.profileName = str(uuid.uuid4())
         self.indexOfCurrentUUID = 0
@@ -15,7 +19,9 @@ class SchedulerController:
         self.totalDuration = None
         self.currentUUID = None
         self.s3service = S3Service()
-        self.bxfFileName = "year_" + time.strftime("%Y/month_%m/day%d") + "time_" + time.strftime("%H:%M:%S")
+        self.bxfFileName = "year_" + \
+            time.strftime("%Y/month_%m/day%d") + "time_" + \
+            time.strftime("%H:%M:%S")
         self.EVENT_ID = None
         self.xmlError = {'statusCode': '400', "body": 'Not valid xml structure'}
 
@@ -58,11 +64,9 @@ class SchedulerController:
             runningEventID = self.getCurrentRunningEventID()
             resultXML = self.getLiveEvent(runningEventID)
             elapsedTime = self.getElapsedInSeconds(resultXML)
-            print ("elapsed: " + elapsedTime)
-            print ("duration: " + str(self.totalDuration))
 
             #if seconds left on video is under 30, send another video up
-            if((self.totalDuration - int(elapsedTime)) < 30 and waitingToPlay):
+            if((self.totalDuration - int(elapsedTime)) < self.secondsLeftSendingNextVideo and waitingToPlay):
                 try:
                     auuid = self.listOfInputTimes[self.indexOfCurrentUUID - 1].get('uid')
                     xmlCode = xmlConverterService.nextEvent(xml, auuid, self.outPutPath)
@@ -77,10 +81,8 @@ class SchedulerController:
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not update Live event, Error: ' + str(e)}
 
-
-
             #play video when last video close to complete. This may take some tweaking depending on delay.
-            if ((self.totalDuration - int(elapsedTime)) < 2):
+            if ((self.totalDuration - int(elapsedTime)) < self.secondsLeftPlayingNextVideo):
                 if(not flagEventFinished):
                     flagForLastPlay = False
                 # start the event in Live
@@ -98,13 +100,14 @@ class SchedulerController:
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not parse input duration times, Error: ' + str(e)}
 
+            #ping every second
             time.sleep(1)
 
     def convertSendStartInitialLiveEvent(self, xml):
         xmlConverterService = XMLGenerator()
         # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml, "36", self.outPutPath)
+            createEventXML = xmlConverterService.convertEvent(xml, self.profileNumber, self.outPutPath)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
@@ -221,7 +224,7 @@ class SchedulerController:
             return {'statusCode': '400', 'body': 'Not a valid string input'}
         #send to LiveService
         liveservice = LiveService()
-        #get and set live event id
+        # get and set live event id
         self.EVENT_ID = self.getCurrentEventId()
         results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
         return results
@@ -231,37 +234,39 @@ class SchedulerController:
         return live.getLiveEvent(eventID)
 
     def getLiveEventForFrontEnd(self):
+        """
+        Retrieves the currently running event and a list of all the pending events.
+        Assumes that there is only one running event besides the one named "Redirect"
+        and there is one video per event. UUID is found under the certificate_file tag
+        in the input section.
+        :return: UUIDs for the running event and a comma-separated
+                 list of all the pending events.
+        """
         live = LiveService()
-        #Get Live Event
-        self.EVENT_ID = self.getCurrentEventId()
 
-        #get status which gives the current running input
-        status = live.getLiveEventStatus(self.EVENT_ID)
-        root = ET.fromstring(status.content)
-        active_input_id = root.find('active_input_id')
-
-        currentEventInfo = self.getLiveEvent()
         try:
-            rootOfEvent = ET.fromstring(currentEventInfo.content)
-            uuidStringForPending = ""
-            runningUuid = ""
-            flagForreachingCurrentVideo = False
-            for pendingInput in rootOfEvent.iter('input'):
-                idOfInput = pendingInput.find('id')
-                if (flagForreachingCurrentVideo == True):
-                    file_input = pendingInput.find('file_input')
-                    uuidTemp = file_input.find('certificate_file')
-                    pendingUuid = uuidTemp.text.replace("urn:uuid:", "")
-                    uuidStringForPending += pendingUuid + ","
-                if(idOfInput.text == active_input_id.text):
-                    file_input = pendingInput.find('file_input')
-                    uuidTemp = file_input.find('certificate_file')
-                    runningUuid = uuidTemp.text.replace("urn:uuid:", "")
-                    flagForreachingCurrentVideo = True
-        except Exception as e:
-            return {'statusCode': '400', "body": 'Could not get uuids from event or no running event' + str(e)}
+            # Extract the UUID for the running event
+            runningEventUUID = ''
+            runningEvent = live.getLiveEvents('running')
+            root = ET.fromstring(runningEvent.content)
+            for event in root.iter('live_event'):
+                if (event.find('name')).text != 'Redirect':
+                    tempID = event.find('certificate_file')
+                    runningEventUUID = tempID.text.replace("urn:uuid:", "")
 
-        return {'statusCode': '200', 'running': runningUuid, 'pending': uuidStringForPending}
+            # Concatenate all pending event UUIDs in a comma-separated list
+            pendingEventUUIDs = ''
+            pendingEvents = live.getLiveEvents('pending')
+            root = ET.fromstring(pendingEvents.content)
+            for event in root.iter('live_event'):
+                tempID = event.find('certificate_file')
+                pendingEventUUIDs += tempID.text.replace("urn:uuid:", "")
+                pendingEventUUIDs += ','
+
+        except Exception as e:
+            return {'statusCode': '400', "body": 'Could not get UUIDs from running or pending events' + str(e)}
+
+        return {'statusCode': '200', 'running': runningEventUUID, 'pending': pendingEventUUIDs}
 
     def getCurrentEventId(self):
         live = LiveService()
@@ -270,14 +275,15 @@ class SchedulerController:
             root = ET.fromstring(results.content)
             child = root.find('live_event')
             href = child.get('href')
-            #strip off the /live_events/ to just get the event number
+            # strip off the /live_events/ to just get the event number
             event = href[13:]
         except Exception as e:
             return {'statusCode': '400', 'body': 'Failed to get Current Event ID. Be sure that Event has been created Error: ' + str(e)}
         return event
 
     def getDurationInSeconds(self, xml_code):
-        #Get duration from LIVE. Returns video duration rounded down to the minute.
+        # Get duration from LIVE. Returns video duration rounded down to the
+        # minute.
         try:
             root = ET.fromstring(xml_code.content)
             totalDuration = 0
@@ -286,7 +292,7 @@ class SchedulerController:
                 general = input_info.find('general')
                 durationTag = general.find('duration')
                 duration = durationTag.text
-                #Strip the min and sec off of the time for the duration
+                # Strip the min and sec off of the time for the duration
                 digits = []
                 for i in duration:
                     if i.isdigit():
@@ -368,3 +374,4 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
         return event
+
