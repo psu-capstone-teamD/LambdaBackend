@@ -4,12 +4,12 @@ from services.XMLConverterService.XMLConverterService import XMLGenerator
 import xml.etree.ElementTree as ET
 import time
 import uuid
+import re
 
 
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
-        self.profileNumber = '36'
         self.secondsLeftSendingNextVideo = 30
         self.secondsLeftPlayingNextVideo = 2
         self.outPutPath = None
@@ -91,7 +91,7 @@ class SchedulerController:
             if((self.totalDuration - int(elapsedTime)) < self.secondsLeftSendingNextVideo and waitingToPlay):
                 try:
                     auuid = self.listOfInputTimes[self.indexOfCurrentUUID - 1].get('uid')
-                    xmlCode = xmlConverterService.nextEvent(xml, auuid, self.outPutPath)
+                    xmlCode = xmlConverterService.convertEvent(xml, auuid, self.outPutPath)
                     tempCheck = self.listOfInputTimes[self.indexOfCurrentUUID]
                     if(tempCheck == None):
                         flagEventFinished = False
@@ -129,7 +129,7 @@ class SchedulerController:
         xmlConverterService = XMLGenerator()
         # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml, self.profileNumber, self.outPutPath)
+            createEventXML = xmlConverterService.convertEvent(xml, None, self.outPutPath)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
@@ -156,8 +156,8 @@ class SchedulerController:
         # get the start/end/duration times for each video from converter service
         xmlConverterService = XMLGenerator()
         try:
-            tree = ET.ElementTree(xml)
-            root = xmlConverterService.iteratetoSchedule(xmlConverterService.stripNameSpace(tree.getroot()))
+            bxfxml = re.sub('\\sxmlns="[^"]+"', '', xml, count=1)  # prevents namespaces
+            root = (ET.fromstring(bxfxml)).find('.//BxfData/Schedule')
             self.listOfInputTimes = xmlConverterService.parseEvents(root)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get start/end times from BXF .xml, Error: ' + str(e)}
@@ -272,8 +272,11 @@ class SchedulerController:
             runningEvent = live.getLiveEvents('running')
             root = ET.fromstring(runningEvent.content)
             for event in root.iter('live_event'):
-                if (event.find('name')).text != 'Redirect':
-                    tempID = event.find('certificate_file')
+                name = event.find('name')
+                if name.text != 'Redirect':
+                    input = event.find('input')
+                    fileInput = input.find('file_input')
+                    tempID = fileInput.find('certificate_file')
                     runningEventUUID = tempID.text.replace("urn:uuid:", "")
 
             # Concatenate all pending event UUIDs in a comma-separated list
@@ -281,7 +284,9 @@ class SchedulerController:
             pendingEvents = live.getLiveEvents('pending')
             root = ET.fromstring(pendingEvents.content)
             for event in root.iter('live_event'):
-                tempID = event.find('certificate_file')
+                input = event.find('input')
+                fileInput = input.find('file_input')
+                tempID = fileInput.find('certificate_file')
                 pendingEventUUIDs += tempID.text.replace("urn:uuid:", "")
                 pendingEventUUIDs += ','
 
@@ -396,3 +401,4 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
         return event
+
