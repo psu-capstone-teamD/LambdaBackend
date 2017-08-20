@@ -7,11 +7,11 @@ class XMLGenerator:
 
     def convertEvent(self, bxfXML, uuid, outputPath):
         """
-        Create a new live event
+        Create a new live event without a profile.
         :param bxfXML: BXF file as a string.
-        :param uuid: UUID of the currently streaming event.
+        :param uuid: UUID of the currently streaming event. Can be set to None.
         :param outputPath: The destination address for the stream.
-        :return: XML for a live event.
+        :return: XML for a live event without a profile.
         """
         bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
         root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
@@ -19,17 +19,18 @@ class XMLGenerator:
         try:
             events = self.nextEvent(self.parseEvents(root), uuid)
         except RuntimeError:
-            return "Error, could not find the next events."
+            return "Error, could not find the next event."
         liveXML = generateEvent(metadata, events, outputPath)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def convertEventWithProfile(self, bxfXML, profileID, uuid, outputPath):
+    def convertEventWithProfile(self, bxfXML, profileID, uuid):
         """
-        Create a new live event
+        Create a new live event using a profile.
         :param bxfXML: BXF file as a string.
         :param profileID: Required profile ID.
+        :param uuid: UUID of the currently streaming event. Can be set to None.
         :param outputPath: The destination address for the stream.
-        :return: XML for a live event.
+        :return: XML for a live event with profile number.
         """
         bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
         root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
@@ -37,7 +38,7 @@ class XMLGenerator:
         try:
             events = self.nextEvent(self.parseEvents(root), uuid)
         except RuntimeError:
-            return "Error, could not find the next events."
+            return "Error, could not find the next event."
         liveXML = generateEventWithProfile(metadata, events, profileID)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -55,7 +56,7 @@ class XMLGenerator:
         try:
             events = self.nextNevents(None, self.parseEvents(root), None)
         except RuntimeError:
-            return "Error, could not find the next events"
+            return "Error, could not find the next event."
         liveXML = generateSchedule(profileID, metadata, events)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -72,7 +73,7 @@ class XMLGenerator:
         try:
             events = self.nextNevents(1, self.parseEvents(root), currentVideoUUID)
         except RuntimeError:
-            return "Error"
+            return "Error: Could not find the next events."
         liveXML = generateUpdate(events)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -126,10 +127,11 @@ class XMLGenerator:
 
     def nextEvent(self, events, currentVideoUUID):
         """
-        Exclude all inputs except the subsequent n after the currently streaming video.
+        Exclude all inputs except the next event after the currently streaming video.
         :param events: List of all inputs in the BXF file.
-        :param currentVideoUUID: UUID of the currently streaming video.
-        :return: A list of the next n events or fewer.
+        :param currentVideoUUID: UUID of the currently streaming video. If set to None,
+               the first video in the list is chosen.
+        :return: A list of one event, the next event to stream.
         """
         if not currentVideoUUID:
             return [events[0]]
@@ -154,9 +156,6 @@ class XMLGenerator:
             if events[i]["uid"] == currentVideoUUID:
                 return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
         return []
-
-    def writetofile(self, liveXML, name):
-        ET.ElementTree.write(liveXML, name, encoding='utf-8', xml_declaration=True)
 
     def elementsEqual(self, e1, e2):
         if e1.tag != e2.tag: return False
