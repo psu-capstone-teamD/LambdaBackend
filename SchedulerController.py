@@ -255,7 +255,7 @@ class SchedulerController:
         live = LiveService()
         return live.getLiveEvent(eventID)
 
-    def getLiveEventForFrontEnd(self):
+        def getLiveEventForFrontEnd(self):
         """
         Retrieves the currently running event and a list of all the pending events.
         Assumes that there is only one running event besides the one named "Redirect"
@@ -272,8 +272,11 @@ class SchedulerController:
             runningEvent = live.getLiveEvents('running')
             root = ET.fromstring(runningEvent.content)
             for event in root.iter('live_event'):
-                if (event.find('name')).text != 'Redirect':
-                    tempID = event.find('certificate_file')
+                name = event.find('name')
+                if name.text != 'Redirect':
+                    input = event.find('input')
+                    fileInput = input.find('file_input')
+                    tempID = fileInput.find('certificate_file')
                     runningEventUUID = tempID.text.replace("urn:uuid:", "")
 
             # Concatenate all pending event UUIDs in a comma-separated list
@@ -281,7 +284,9 @@ class SchedulerController:
             pendingEvents = live.getLiveEvents('pending')
             root = ET.fromstring(pendingEvents.content)
             for event in root.iter('live_event'):
-                tempID = event.find('certificate_file')
+                input = event.find('input')
+                fileInput = input.find('file_input')
+                tempID = fileInput.find('certificate_file')
                 pendingEventUUIDs += tempID.text.replace("urn:uuid:", "")
                 pendingEventUUIDs += ','
 
