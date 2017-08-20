@@ -6,26 +6,27 @@ sys.path.append('services/LiveService')
 from LiveService import LiveService
 
 
+
 L = LiveService()
 baseURL = "https://yanexx65s8e1.live.elementalclouddev.com/api"
 
 
 class LiveServiceTest(unittest.TestCase):
 
-    # @patch('services.LiveService.LiveService.time', return_value=1502345833)
-    # def testSetHeaders(self, mock_time):
-    #     headers = L.setHeaders("/schedules")
-    #     self.assertEqual(headers, {'X-Auth-Expires': '1502345863',
-    #                                'X-Auth-Key': '9c9a72cd3a8feec48539f1943afbef8d',
-    #                                'Content-type': 'application/xml',
-    #                                'X-Auth-User': '',
-    #                                'Accept': 'application/xml'})
+    #@patch('LiveService.time', return_value=1502345833)
+    #def testSetHeaders(self, mock_time):
+    #    headers = L.setHeaders("/schedules")
+    #    self.assertEqual(headers, {'X-Auth-Expires': '1502345863',
+    #                               'X-Auth-Key': '9c9a72cd3a8feec48539f1943afbef8d',
+    #                               'Content-type': 'application/xml',
+    #                               'X-Auth-User': '',
+    #                               'Accept': 'application/xml'})
 
-    # @requests_mock.Mocker()
-    # def testGetLiveStatus(self, m):
-    #     m.get(baseURL + "/live_events/150/status", status_code=200)
-    #     resp = L.getLiveEventStatus(150)
-    #     self.assertEqual(resp.status_code, 200)
+    @requests_mock.Mocker()
+    def testGetStatus(self, m):
+        m.get(baseURL + "/live_events/150/status", status_code=200)
+        resp = L.getLiveEventStatus(150)
+        self.assertEqual(resp.status_code, 200)
 
     @requests_mock.Mocker()
     def testGetEvents(self, m):
@@ -125,6 +126,13 @@ class LiveServiceTest(unittest.TestCase):
         m.delete(baseURL + "/live_event_profiles/33", status_code=200)
         resp = L.removeProfile(33)
         self.assertEqual(resp.status_code, 200)
+
+    @requests_mock.Mocker()
+    def testStartEvent(self, m):
+        m.post(baseURL + "/live_events/50/start", status_code=200)
+        resp = L.startLiveEvent(50)
+        self.assertEqual(resp.status_code, 200)
+
 
 
 if __name__ == '__main__':
