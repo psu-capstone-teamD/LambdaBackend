@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schedule>
+  <name>ScheduleTest</name>
+  <profile>test_profile</profile>
+  <node_id>3</node_id>
+  <input>
+    <name>input_1</name>
+    <order>1</order>
+    <file_input>
+      <uri>//s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</uri>
+    </file_input>
+  </input>
+  <start_type>start_time</start_type>
+  <start_time>2018-08-27 22:46:00 -0700</start_time>
+  <end_type>end_time</end_type>
+  <end_time>2018-08-27 01:46:00 -0700</end_time>
+  <until>end_date</until>
+  <end_date>2018-08-28 23:59:59 -0700</end_date>
+  <schedule_type>daily</schedule_type>
+  <daily_x>1</daily_x>
+</schedule>

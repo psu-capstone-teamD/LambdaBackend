@@ -1,4 +1,6 @@
+import sys
 import unittest
+sys.path.append('services/S3Service')
 from S3Service import S3Service
 
 
@@ -37,7 +39,7 @@ class MyTestCase(unittest.TestCase):
         resp = s3.storexml('incorrectBucketName', 'afilename.xml', 'afile.xml')
         self.assertEqual(resp["statusCode"], '400')
 
-    def test_storexml_wrong_bucket(self):
+    def test_storexml_wrong_bucket2(self):
         s3 = S3Service()
         resp = s3.storexml(1, 'afilename.xml', 'afile.xml')
         self.assertEqual(resp["statusCode"], '400')

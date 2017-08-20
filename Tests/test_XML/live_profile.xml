@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<live_event_profile>
+  <name>test_profile2</name>
+  <description>a test profile</description>
+  <failure_rule>
+    <priority>50</priority>
+    <restart_on_failure>false</restart_on_failure>
+  </failure_rule>
+  <stream_assembly>
+    <name>SA1</name>
+    <video_description>
+      <height>720</height>
+      <width>1280</width>
+      <h264_settings>
+        <bitrate>5000000</bitrate>
+      </h264_settings>
+      <codec>h.264</codec>
+    </video_description>
+  </stream_assembly>
+  <output_group>
+    <apple_live_group_settings>
+      <cdn>Basic_PUT</cdn>
+      <destination>
+        <uri>https://yanexx65s8e1.live.elementalclouddev.com/in_put/test</uri>
+      </destination>
+    </apple_live_group_settings>
+    <type>apple_live_group_settings</type>
+    <output>
+      <name_modifier>output1</name_modifier>
+      <stream_assembly_name>SA1</stream_assembly_name>
+      <container>m3u8</container>
+    </output>
+  </output_group>
+</live_event_profile>

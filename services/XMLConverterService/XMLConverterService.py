@@ -1,33 +1,93 @@
 import xml.etree.ElementTree as ET
-from StringIO import StringIO
+import re
+from GenerateXML import *
 
 
 class XMLGenerator:
 
-    def run(self, bxfXML, currentVideoUUID = None):
-        tree = ET.ElementTree(bxfXML)
-        root = self.iteratetoSchedule(self.stripNameSpace(tree.getroot()))
+    def convertEvent(self, bxfXML, uuid, outputPath):
+        """
+        Create a new live event without a profile.
+        :param bxfXML: BXF file as a string.
+        :param uuid: UUID of the currently streaming event. Can be set to None.
+        :param outputPath: The destination address for the stream.
+        :return: XML for a live event without a profile.
+        """
+        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
+        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
         metadata = self.parseMetadata(root)
-        events = self.nextNevents(2, self.parseEvents(root), currentVideoUUID)
-        liveXML = self.generateXML(metadata, events)
-        liveString = self.filetostring(liveXML.getroot())
-        return liveString
+        try:
+            events = self.nextEvent(self.parseEvents(root), uuid)
+        except RuntimeError:
+            return "Error, could not find the next event."
+        liveXML = generateEvent(metadata, events, outputPath)
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def generateXML(self, metadata, events):
-        eventHeader = ET.Element("live_event")
-        ET.SubElement(eventHeader, "name").text = metadata['name']
-        for event in events:
-            inputHeader = ET.SubElement(eventHeader, "input")
-            ET.SubElement(inputHeader, "name").text = event['uid']
-            ET.SubElement(inputHeader, "order").text = str(event['order'])
-            fileHeader = ET.SubElement(inputHeader, "file_input")
-            ET.SubElement(fileHeader, "uri").text = event['uri']
-        ET.SubElement(eventHeader, "node_id").text = "3"
-        ET.SubElement(eventHeader, "profile").text = "11"
-        return ET.ElementTree(eventHeader)
+    def convertEventWithProfile(self, bxfXML, profileID, uuid):
+        """
+        Create a new live event using a profile.
+        :param bxfXML: BXF file as a string.
+        :param profileID: Required profile ID.
+        :param uuid: UUID of the currently streaming event. Can be set to None.
+        :param outputPath: The destination address for the stream.
+        :return: XML for a live event with profile number.
+        """
+        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
+        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        metadata = self.parseMetadata(root)
+        try:
+            events = self.nextEvent(self.parseEvents(root), uuid)
+        except RuntimeError:
+            return "Error, could not find the next event."
+        liveXML = generateEventWithProfile(metadata, events, profileID)
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def iteratetoSchedule(self, root):
-        return root.find('.//BxfData/Schedule')
+    def convertSchedule(self, bxfXML, profileID):
+        """
+        Create a schedule in Live XML from a BXF file. This can be
+        used for creating new schedules or updating old ones.
+        :param bxfXML: BXF file as a string.
+        :param profileID: Required profile ID.
+        :return: XML for a schedule.
+        """
+        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
+        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        metadata = self.parseMetadata(root)
+        try:
+            events = self.nextNevents(None, self.parseEvents(root), None)
+        except RuntimeError:
+            return "Error, could not find the next event."
+        liveXML = generateSchedule(profileID, metadata, events)
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
+
+    def convertUpdate(self, bxfXML, currentVideoUUID):
+        """
+        Create an updated playlist for a live event. Only includes videos that
+        are pending after the currently streaming video.
+        :param bxfXML: BXF file as a string.
+        :param currentVideoUUID: UUID of the currently streaming video.
+        :return: XML for a modified live event playlist.
+        """
+        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
+        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        try:
+            events = self.nextNevents(1, self.parseEvents(root), currentVideoUUID)
+        except RuntimeError:
+            return "Error: Could not find the next events."
+        liveXML = generateUpdate(events)
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
+
+    def convertProfile(self, bxfXML, profileName, outputPath):
+        """
+        Create a new profile for one event in a BXF playlist. The returned
+        XML can be used for creating new profiles or updating old ones.
+        :param bxfXML: BXF file as a string.
+        :param profileName: Unique name for the profile.
+        :param outputPath: The destination address for the stream.
+        :return: XML for a live event profile.
+        """
+        liveXML = generateProfile(profileName, outputPath, "UDP")
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def parseMetadata(self, root):
         """
@@ -37,6 +97,8 @@ class XMLGenerator:
         """
         metadata = {}
         metadata["name"] = root.find("./ScheduleName").text
+        metadata["startTime"] = root.attrib['ScheduleStart']
+        metadata["endTime"] = root.attrib['ScheduleEnd']
         return metadata
 
     def parseEvents(self, root):
@@ -51,50 +113,59 @@ class XMLGenerator:
         for xmlevent in root.findall("./ScheduledEvent"):
             event = {}
             event["eventType"] = xmlevent.find("./EventData").attrib.get('eventType')
-            event["uid"] = xmlevent.find("./EventData/EventId/EventId").text
-            event["order"] = i
-            event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
-            event["screenRes"] = xmlevent.find("./Content/Media/PrecompressedTS/TSVideo/Format").text
-            event["aspectRatio"] = xmlevent.find("./Content/Media/PrecompressedTS/TSVideo/AspectRatio").text
             event["startMode"] = xmlevent.find("./EventData/StartMode").text
             event["endMode"] = xmlevent.find("./EventData/EndMode").text
+            event["uid"] = xmlevent.find("./EventData/EventId/EventId").text
+            event["order"] = str(i)
+            event["uri"] = xmlevent.find("./Content/Media/MediaLocation/Location/AssetServer/PathName").text
+            event["startTime"] = xmlevent.find("./EventData/StartDateTime/SmpteDateTime/SmpteTimeCode").text
+            event["duration"] = xmlevent.find("./EventData/LengthOption/Duration/SmpteDuration/SmpteTimeCode").text
+            event["endTime"] = event["startTime"] + event["duration"]
             events.append(event)
             i += 1
         return events
 
+    def nextEvent(self, events, currentVideoUUID):
+        """
+        Exclude all inputs except the next event after the currently streaming video.
+        :param events: List of all inputs in the BXF file.
+        :param currentVideoUUID: UUID of the currently streaming video. If set to None,
+               the first video in the list is chosen.
+        :return: A list of one event, the next event to stream.
+        """
+        if not currentVideoUUID:
+            return [events[0]]
+        for i in range(len(events)):
+            if events[i]["uid"] == currentVideoUUID:
+                if events[i+1]:
+                    return [events[i+1]]
+        return []
+
     def nextNevents(self, n, events, currentVideoUUID):
         """
         Exclude all inputs except the subsequent n after the currently streaming video.
-        :param n: Number of inputs to include in the live XML.
+        :param n: Number of inputs to include in the live XML. If this value is None,
+               all events are returned.
         :param events: List of all inputs in the BXF file.
         :param currentVideoUUID: UUID of the currently streaming video.
         :return: A list of the next n events or fewer.
         """
-        if currentVideoUUID is not None:
-            for i in range(len(events)):
-                if events[i]["uid"] == currentVideoUUID:
-                    return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
-            return []
-        else:
+        if not n:
             return events
+        for i in range(len(events)):
+            if events[i]["uid"] == currentVideoUUID:
+                return [events[i + j] for j in range(1, n + 1) if (i + j) < len(events)]
+        return []
 
-    def filetostring(self, root):
-        """Returns a string representation of an XML tree element.
-        :param root: the root element of the xml file.
-        :return The element tree in string format
-        """
-        return ET.tostring(root, encoding='utf8', method='xml')
+    def elementsEqual(self, e1, e2):
+        if e1.tag != e2.tag: return False
+        if e1.text != e2.text: return False
+        if e1.attrib != e2.attrib: return False
+        return all(self.elementsEqual(c1, c2) for c1, c2 in zip(e1, e2))
 
-    def stripNameSpace(self, xmlstr):
-        """Removes the namespace code preceding every line of the XML document.
-        :param xmlstr: string representation of xml.
-        :return it.root: the root of the xml tree without the namespaces attached.
-        """
-        it = ET.iterparse(StringIO(xmlstr))
-        for _, el in it:
-            if '}' in el.tag:
-                el.tag = el.tag.split('}', 1)[1]  # strip all namespaces
-        return it.root
-
-    def writetofile(self, liveXML):
-        ET.ElementTree.write(liveXML, "testLiveXML.xml", encoding='utf-8', xml_declaration=True)
+    def validateXML(self, bxf_xml):
+        try:
+            ET.fromstring(bxf_xml)
+        except ET.ParseError:
+            return "StatusCode: 400: Not valid .xml structure"
+        return "StatusCode: 200"
