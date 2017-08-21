@@ -5,6 +5,15 @@ from GenerateXML import *
 
 class XMLGenerator:
 
+    def iterateToSchedule(self, bxfXML):
+        """
+        Iterates to the Schedule tag of the BXF file and removes default namespaces.
+        :param bxfXML: BXF file as a string.
+        :return: The root element of the bxf XML tree.
+        """
+        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # remove namespace
+        return (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+
     def convertEvent(self, bxfXML, uuid, outputPath):
         """
         Create a new live event without a profile.
@@ -13,13 +22,12 @@ class XMLGenerator:
         :param outputPath: The destination address for the stream.
         :return: XML for a live event without a profile.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         metadata = self.parseMetadata(root)
         try:
             events = self.nextEvent(self.parseEvents(root), uuid)
         except RuntimeError:
-            return "Error, could not find the next event."
+            return "Error: Could not find the next event."
         liveXML = generateEvent(metadata, events, outputPath)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -31,13 +39,12 @@ class XMLGenerator:
         :param uuid: UUID of the currently streaming event. Can be set to None.
         :return: XML for a live event with profile number.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         metadata = self.parseMetadata(root)
         try:
             events = self.nextEvent(self.parseEvents(root), uuid)
         except RuntimeError:
-            return "Error, could not find the next event."
+            return "Error: Could not find the next event."
         liveXML = generateEventWithProfile(metadata, events, profileID)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -49,13 +56,12 @@ class XMLGenerator:
         :param profileID: Required profile ID.
         :return: XML for a schedule.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         metadata = self.parseMetadata(root)
         try:
             events = self.nextNevents(None, self.parseEvents(root), None)
         except RuntimeError:
-            return "Error, could not find the next event."
+            return "Error: Could not find the next event."
         liveXML = generateSchedule(profileID, metadata, events)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -67,8 +73,7 @@ class XMLGenerator:
         :param currentVideoUUID: UUID of the currently streaming video.
         :return: XML for a modified live event playlist.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         try:
             events = self.nextNevents(1, self.parseEvents(root), currentVideoUUID)
         except RuntimeError:
