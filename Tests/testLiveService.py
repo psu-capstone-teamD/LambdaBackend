@@ -13,14 +13,15 @@ baseURL = "https://yanexx65s8e1.live.elementalclouddev.com/api"
 
 class LiveServiceTest(unittest.TestCase):
 
-    #@patch('LiveService.time', return_value=1502345833)
-    #def testSetHeaders(self, mock_time):
-    #    headers = L.setHeaders("/schedules")
-    #    self.assertEqual(headers, {'X-Auth-Expires': '1502345863',
-    #                               'X-Auth-Key': '9c9a72cd3a8feec48539f1943afbef8d',
-    #                               'Content-type': 'application/xml',
-    #                               'X-Auth-User': '',
-    #                               'Accept': 'application/xml'})
+
+    '''@patch('services.LiveService.LiveService.time', return_value=1502345833)
+    def testSetHeaders(self, mock_time):
+        headers = L.setHeaders("/schedules")
+        self.assertEqual(headers, {'X-Auth-Expires': '1502345863',
+                                    'X-Auth-Key': '9c9a72cd3a8feec48539f1943afbef8d',
+                                    'Content-type': 'application/xml',
+                                    'X-Auth-User': '',
+                                    'Accept': 'application/xml'})'''
 
     @requests_mock.Mocker()
     def testGetStatus(self, m):

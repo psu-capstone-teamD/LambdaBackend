@@ -159,7 +159,8 @@ class XMLGenerator:
 
     def elementsEqual(self, e1, e2):
         if e1.tag != e2.tag: return False
-        if e1.text != e2.text: return False
+        if e1.text != e2.text:
+            return False
         if e1.attrib != e2.attrib: return False
         return all(self.elementsEqual(c1, c2) for c1, c2 in zip(e1, e2))
 

@@ -58,6 +58,8 @@ class ConverterTests(unittest.TestCase):
             liveXML = infile.read()
         outputRoot = ET.fromstring(liveXML)
 
+        print input
+
         self.assertTrue(self.converter.elementsEqual(inputRoot, outputRoot))
 
     def testConvertSchedule(self):
