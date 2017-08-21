@@ -33,11 +33,12 @@ class ConverterTests(unittest.TestCase):
         val = generateUpdate(inputs)
         self.assertEqual(val.getroot().find('./input/order').text, '1')
 
-    #def testGenerateProfile(self):
-    #    inputs = [{'order': '1', 'uid': '1', 'uri': '1'},
-    #              {'order': '2', 'uid': '2', 'uri': '2'}]
-    #    val = generateProfile(inputs)
-    #    self.assertEqual(val.getroot().find('./input/order').text, '1')
+    def testGenerateProfile(self):
+        profileName = "TestProfile"
+        outputPath = "TestPath"
+        outputSettings = "UDP"
+        val = generateProfile(profileName, outputPath, outputSettings)
+        self.assertEqual(val.getroot().find('./output_group/type').text, 'udp_group_settings')
 
     def testBadValidate(self):
         bad_xml = "<a><b></b></c>"
@@ -85,14 +86,6 @@ class ConverterTests(unittest.TestCase):
 
         self.assertTrue(self.converter.elementsEqual(inputRoot, outputRoot))
 
-
-    # def testWriteToFile(self):
-    #     xml = "<?xml version='1.0' encoding='utf-8'?>\n<live_event>\n  <name>testX</name>\n  <profile>test_profile</profile>\n  <node_id>3</node_id>\n  <input>\n    <order>1</order>\n    <file_input>\n      <uri>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</uri>\n    </file_input>\n  </input>\n</live_event>"
-    #     root = ET.parse('Tests/test_XML/live_event.xml')
-    #     self.converter.writetofile(root)
-    #     with open('testliveProfile.xml') as f:
-    #         fileXml = f.read()
-    #     self.assertEqual(xml, fileXml)
 
 
 if __name__ == '__main__':
