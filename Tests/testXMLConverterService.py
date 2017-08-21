@@ -42,7 +42,7 @@ class ConverterTests(unittest.TestCase):
 
     def testBadValidate(self):
         bad_xml = "<a><b></b></c>"
-        self.assertEqual(self.converter.validateXML(bad_xml), 'StatusCode: 400: Not valid .xml structure')
+        self.assertEqual(self.converter.validateXML(bad_xml), 'StatusCode: 400: Not valid XML structure')
 
     def testGoodValidate(self):
         good_xml = "<a><b></b></a>"
@@ -57,8 +57,6 @@ class ConverterTests(unittest.TestCase):
         with open('Tests/test_XML/LiveShort.xml', 'r') as infile:
             liveXML = infile.read()
         outputRoot = ET.fromstring(liveXML)
-
-        print input
 
         self.assertTrue(self.converter.elementsEqual(inputRoot, outputRoot))
 

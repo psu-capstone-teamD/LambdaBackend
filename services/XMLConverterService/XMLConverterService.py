@@ -29,7 +29,6 @@ class XMLGenerator:
         :param bxfXML: BXF file as a string.
         :param profileID: Required profile ID.
         :param uuid: UUID of the currently streaming event. Can be set to None.
-        :param outputPath: The destination address for the stream.
         :return: XML for a live event with profile number.
         """
         bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
@@ -158,15 +157,24 @@ class XMLGenerator:
         return []
 
     def elementsEqual(self, e1, e2):
-        if e1.tag != e2.tag: return False
-        if e1.text != e2.text:
+        """
+        Check if all elements in an ElementTree object are equal.
+        :param e1: Root element of the first tree.
+        :param e2: Root element of the second tree.
+        :return: True - equal, False - not equal.
+        """
+        if e1.tag != e2.tag or e1.text != e2.text or e1.attrib != e2.attrib:
             return False
-        if e1.attrib != e2.attrib: return False
         return all(self.elementsEqual(c1, c2) for c1, c2 in zip(e1, e2))
 
-    def validateXML(self, bxf_xml):
+    def validateXML(self, bxfXML):
+        """
+        Verify if a string has a well-formed xml structure.
+        :param bxfXML: BXF file as a string.
+        :return: Status code 200 for valid or 400 for not valid.
+        """
         try:
-            ET.fromstring(bxf_xml)
+            ET.fromstring(bxfXML)
         except ET.ParseError:
-            return "StatusCode: 400: Not valid .xml structure"
+            return "StatusCode: 400: Not valid XML structure"
         return "StatusCode: 200"
