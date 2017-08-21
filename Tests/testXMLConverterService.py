@@ -83,12 +83,16 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(val, [])
 
     def testParseMetadata(self):
-        root = ET.parse('Tests/test_XML/BXFShort.xml')
-        val = self.converter.parseMetadata(root)
-        self.assertEqual(val, [])
+        with open('Tests/test_XML/BXFShort.xml', 'r') as infile:
+            bxf = infile.read()
+        root = self.converter.iterateToSchedule(bxf)
+        meta = self.converter.parseMetadata(root)
+        self.assertEqual(meta['name'], 'WBCC_09072011_1315410574')
+        self.assertEqual(meta['startTime'], '2011-09-07T00:00:00.00')
+        self.assertEqual(meta['endTime'], '2011-09-07T23:59:46.05')
 
     def testNextEvent(self):
-        with open('test_XML/BXFShort.xml', 'r') as infile:
+        with open('Tests/test_XML/BXFShort.xml', 'r') as infile:
             bxf = infile.read()
         root = self.converter.iterateToSchedule(bxf)
         events = self.converter.parseEvents(root)
@@ -100,7 +104,7 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(next, [])
 
     def testNextNevents(self):
-        with open('test_XML/BXFShort.xml', 'r') as infile:
+        with open('Tests/test_XML/BXFShort.xml', 'r') as infile:
             bxf = infile.read()
         root = self.converter.iterateToSchedule(bxf)
         events = self.converter.parseEvents(root)
