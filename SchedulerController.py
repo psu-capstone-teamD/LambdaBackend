@@ -46,21 +46,60 @@ class SchedulerController:
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
 
-        #this converts and starts the initial event in Live
-        convertResult = self.convertSendStartInitialLiveEvent(xml)
-        if (convertResult["statusCode"] != '200'):
-            return convertResult
-
-        #this gets the duration times for each UUID that was retrieved from the BXF for all the videos
-        #Sets them in a List
+        # this gets the duration times for each UUID that was retrieved from the BXF for all the videos
+        # Sets them in a List
         setTimesResult = self.setListOfInputTimes(xml)
         if (setTimesResult["statusCode"] != '200'):
             return setTimesResult
 
-        #This sets the duration time for the first video and sets it..It returns just the status code if passes.
-        totalDurationResult = self.setInitialTotalDuration()
-        if (totalDurationResult["statusCode"] != '200'):
-            return totalDurationResult
+        index = 0
+        flagForEventsPlayingAlready = True
+        initialRunningEvents = True
+        noInitialRunningEvents = True
+        while(flagForEventsPlayingAlready):
+            resultOfEvents = self.getLiveEventForFrontEnd()
+            runningEvent = resultOfEvents["running"]
+            pendingEvent = resultOfEvents["pending"]
+
+            if(runningEvent != "" and initialRunningEvents):
+                noInitialRunningEvents = False
+                if(runningEvent == self.listOfEventIds[index]):
+                    self.indexOfCurrentUUID = index + 1
+                    initialRunningEvents = False
+                    noInitialRunningEvents = True
+                    continue
+
+                if(pendingEvent == self.listOfEventIds[index]):
+                    initialRunningEvents = False
+                    noInitialRunningEvents = True
+                    self.indexOfCurrentUUID = index
+                    continue
+
+                if (runningEvent != self.listOfEventIds[index] and pendingEvent != self.listOfEventIds[index]):
+                    index += 1
+
+
+            #if there is no events running or pending, then start this one right up since it is the first one to start.
+            if (runningEvent == "" and pendingEvent == "" and noInitialRunningEvents):
+                initialRunningEvents = False
+                if (index > 0):
+                    # this converts and starts the initial event in Live
+                    convertResult = self.convertSendStartInitialLiveEvent(xml, self.indexOfCurrentUUID)
+                    if (convertResult["statusCode"] != '200'):
+                        return convertResult
+
+                if(index == 0):
+                    # this converts and starts the initial event in Live
+                    convertResult = self.convertSendStartInitialLiveEvent(xml, None)
+                    if (convertResult["statusCode"] != '200'):
+                        return convertResult
+
+                # This sets the duration time for the first video and sets it..It returns just the status code if passes.
+                totalDurationResult = self.setInitialTotalDuration()
+                if (totalDurationResult["statusCode"] != '200'):
+                    return totalDurationResult
+
+                flagForEventsPlayingAlready = False
 
         #Need to put in a delay otherwise it won't give Live enough time to start and elapsedTime will be initially off.
         time.sleep(1)
@@ -176,11 +215,11 @@ class SchedulerController:
 
         return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
 
-    def convertSendStartInitialLiveEvent(self, xml):
+    def convertSendStartInitialLiveEvent(self, xml, uuid):
         xmlConverterService = XMLGenerator()
         # get the live xml from the bxf xml with the correct profile id
         try:
-            createEventXML = xmlConverterService.convertEvent(xml, None, self.outPutPath)
+            createEventXML = xmlConverterService.convertEvent(xml, uuid, self.outPutPath)
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not Convert Schedule .xml, Error: ' + str(e)}
 
