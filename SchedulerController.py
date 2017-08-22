@@ -56,39 +56,47 @@ class SchedulerController:
         flagForEventsPlayingAlready = True
         initialRunningEvents = True
         noInitialRunningEvents = True
+        incrementedIndex = False
         while(flagForEventsPlayingAlready):
             resultOfEvents = self.getLiveEventForFrontEnd()
             runningEvent = resultOfEvents["running"]
             pendingEvent = resultOfEvents["pending"]
 
+            currentUUID = self.listOfInputTimes[index].get('uid')
+            currentUUID = currentUUID.replace("urn:uuid:", "")
+
             if(runningEvent != "" and initialRunningEvents):
                 noInitialRunningEvents = False
-                if(runningEvent == self.listOfEventIds[index]):
+                if(runningEvent == currentUUID):
                     self.indexOfCurrentUUID = index + 1
                     initialRunningEvents = False
                     noInitialRunningEvents = True
+                    incrementedIndex = True
                     continue
 
-                if(pendingEvent == self.listOfEventIds[index]):
+                if(pendingEvent == currentUUID):
                     initialRunningEvents = False
                     noInitialRunningEvents = True
                     self.indexOfCurrentUUID = index
+                    incrementedIndex = True
                     continue
 
-                if (runningEvent != self.listOfEventIds[index] and pendingEvent != self.listOfEventIds[index]):
+                if (runningEvent != currentUUID and pendingEvent != currentUUID):
                     index += 1
+                    incrementedIndex = True
 
 
             #if there is no events running or pending, then start this one right up since it is the first one to start.
             if (runningEvent == "" and pendingEvent == "" and noInitialRunningEvents):
                 initialRunningEvents = False
-                if (index > 0):
+                if (incrementedIndex):
                     # this converts and starts the initial event in Live
-                    convertResult = self.convertSendStartInitialLiveEvent(xml, self.indexOfCurrentUUID)
+                    tempUUID = self.listOfInputTimes[self.indexOfCurrentUUID - 1].get('uid')
+                    convertResult = self.convertSendStartInitialLiveEvent(xml, tempUUID)
                     if (convertResult["statusCode"] != '200'):
                         return convertResult
 
-                if(index == 0):
+                if(not incrementedIndex):
                     # this converts and starts the initial event in Live
                     convertResult = self.convertSendStartInitialLiveEvent(xml, None)
                     if (convertResult["statusCode"] != '200'):
@@ -100,6 +108,26 @@ class SchedulerController:
                     return totalDurationResult
 
                 flagForEventsPlayingAlready = False
+
+            if ((self.sizeOfCurrentUUID - 1) <= self.indexOfCurrentUUID and incrementedIndex):
+                flagForEventsPlayingAlready = False
+
+            if ((self.sizeOfCurrentUUID - 1) <= index and incrementedIndex):
+                convertResult = self.convertSendStartInitialLiveEvent(xml, None)
+                if (convertResult["statusCode"] != '200'):
+                    return convertResult
+                # This sets the duration time for the first video and sets it..It returns just the status code if passes.
+                totalDurationResult = self.setInitialTotalDuration()
+                if (totalDurationResult["statusCode"] != '200'):
+                    return totalDurationResult
+                flagForEventsPlayingAlready = False
+
+        if ((self.sizeOfCurrentUUID - 1) <= self.indexOfCurrentUUID and incrementedIndex):
+            resultDeleteEvents = self.deleteEvents()
+            if (resultDeleteEvents["statusCode"] != '200'):
+                return resultDeleteEvents
+
+            return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
 
         #Need to put in a delay otherwise it won't give Live enough time to start and elapsedTime will be initially off.
         time.sleep(1)
@@ -191,17 +219,25 @@ class SchedulerController:
             #ping every second
             time.sleep(1)
 
-        #delete the events when there are no more running or pending events left.
-        #this uses the list of event Id's from earlier and goes through and deletes them.
-        #timer in there so that it give Live enough time to do the deletion
+        resultDeleteEvents = self.deleteEvents()
+        if (resultDeleteEvents["statusCode"] != '200'):
+            return resultDeleteEvents
+
+
+        return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
+
+    def deleteEvents(self):
+        # delete the events when there are no more running or pending events left.
+        # this uses the list of event Id's from earlier and goes through and deletes them.
+        # timer in there so that it give Live enough time to do the deletion
         index = 0
         runningPendingEvents = True
-        while(runningPendingEvents):
+        while (runningPendingEvents):
             resultOfEvents = self.getLiveEventForFrontEnd()
             runningEvent = resultOfEvents["running"]
             pendingEvent = resultOfEvents["pending"]
 
-            if(runningEvent == "" and pendingEvent == ""):
+            if (runningEvent == "" and pendingEvent == ""):
                 time.sleep(2)
                 tempID = self.listOfEventIds[index]
                 try:
@@ -210,10 +246,10 @@ class SchedulerController:
                 except Exception as e:
                     return {'statusCode': '400', "body": 'Could not Delete events, Error: ' + str(e)}
 
-            if(index >= len(self.listOfEventIds)):
+            if (index >= len(self.listOfEventIds)):
                 runningPendingEvents = False
 
-        return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
+        return {'statusCode': '200'}
 
     def convertSendStartInitialLiveEvent(self, xml, uuid):
         xmlConverterService = XMLGenerator()
@@ -262,14 +298,15 @@ class SchedulerController:
                 If there is no first video, then there is no duration and set everything to 0
         """
         try:
-            self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
-            duration1 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
-            hours, minutes, seconds = map(int, duration1.split(':'))
-            self.indexOfCurrentUUID += 1
             if (self.listOfInputTimes[self.indexOfCurrentUUID].get('uid') == None):
                 hours = 0
                 minutes = 0
                 seconds = 0
+            else:
+                self.currentUUID = self.listOfInputTimes[self.indexOfCurrentUUID].get('uid')
+                duration1 = self.listOfInputTimes[self.indexOfCurrentUUID].get('duration')
+                hours, minutes, seconds = map(int, duration1.split(':'))
+                self.indexOfCurrentUUID += 1
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not parse input duration times, Error: ' + str(e)}
 
@@ -462,3 +499,8 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', "body": 'Could not get current running Live event, Error: ' + str(e)}
         return event
+
+sched = SchedulerController()
+res = sched.inputxml("<?xml version='1.0'?><BxfMessage><BxfData action='add'><Schedule action='add' ScheduleEnd='2017-08-17T21:06:01.026Z' ScheduleStart='2017-08-17T20:56:53.026Z' ScheduleId='fcdef9e0-7614-401e-9fc2-01834de2e81a' type='Primary'><Channel action='add' type='digital_television' outOfBand='true' shortName='Default Name' ca='false' status='active' channelNumber='0-1'/><ScheduleName>Default Name</ScheduleName><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:fed86d46-bfef-4799-a662-fe5c7382f030</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>1</SegmentNumber><ProgramName>big</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T20:56:53.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:01:00</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>big_buck_bunny.mp4</HouseNumber></ContentId><Name>big</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:88d37a88-08fd-41bd-b53a-7376affe6c19</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>2</SegmentNumber><ProgramName>big2</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T20:57:53.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:01:00</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>big_buck_bunny.mp4</HouseNumber></ContentId><Name>big2</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:916c5133-5d9c-44b9-b28a-456ac92da65a</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>3</SegmentNumber><ProgramName>cat</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T20:58:53.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:03:36</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>nyan-cat-sample.mp4</HouseNumber></ContentId><Name>cat</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/nyan-cat-sample.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:3e260f42-f25a-4c1e-8fa7-9d83da184bea</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>4</SegmentNumber><ProgramName>rick</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T21:02:29.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:03:32</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>Rick Astley - Never Gonna Give You Up [HQ].mp4</HouseNumber></ContentId><Name>rick</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/Rick%20Astley%20-%20Never%20Gonna%20Give%20You%20Up%20%5BHQ%5D.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent></Schedule></BxfData></BxfMessage>", "path")
+#res = sched.inputxml("<?xml version='1.0'?><BxfMessage><BxfData action='add'><Schedule action='add' ScheduleEnd='2017-08-18T17:47:44.951Z' ScheduleStart='2017-08-18T17:43:08.951Z' ScheduleId='41678f6c-bc25-40d5-be04-876fa68add9a' type='Primary'><Channel action='add' type='digital_television' outOfBand='true' shortName='Default Name' ca='false' status='active' channelNumber='0-1'/><ScheduleName>Default Name</ScheduleName><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:4286f3a6-4f3b-43b5-bce8-7d6e1ab8498f</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>1</SegmentNumber><ProgramName>jkj</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-18T17:43:08.951Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:01:00</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>big_buck_bunny.mp4</HouseNumber></ContentId><Name>jkj</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:5f2e3beb-66e3-457e-a1f4-c7a0baf796ed</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>2</SegmentNumber><ProgramName>jkhk</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-18T17:44:08.951Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:03:36</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>nyan-cat-sample.mp4</HouseNumber></ContentId><Name>jkhk</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/nyan-cat-sample.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent></Schedule></BxfData></BxfMessage>", "path")
+print res
