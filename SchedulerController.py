@@ -79,6 +79,13 @@ class SchedulerController:
             runningEvent = resultOfEvents["running"]
             pendingEvent = resultOfEvents["pending"]
 
+            if(pendingEvent != ""):
+                flagForEventsPlayingAlready = True
+                initialRunningEvents = True
+                noInitialRunningEvents = True
+                incrementedIndex = False
+                continue
+
             if (not (self.sizeOfCurrentUUID - 1) < index):
                 currentUUID = self.listOfInputTimes[index].get('uid')
                 currentUUID = currentUUID.replace("urn:uuid:", "")
