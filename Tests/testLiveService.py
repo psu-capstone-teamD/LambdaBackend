@@ -90,7 +90,7 @@ class LiveServiceTest(unittest.TestCase):
     def testUpdateEvent(self, m):
         with open('Tests/test_XML/live_event.xml', 'r') as infile:
             xml = infile.read()
-        m.post(baseURL + "/live_events/50", status_code=200)
+        m.put(baseURL + "/live_events/50", status_code=200)
         resp = L.updateLiveEvent(50, xml)
         self.assertEqual(resp.status_code, 200)
 
