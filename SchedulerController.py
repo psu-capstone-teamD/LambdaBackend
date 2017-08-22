@@ -52,12 +52,29 @@ class SchedulerController:
         if (setTimesResult["statusCode"] != '200'):
             return setTimesResult
 
+        incrementedIndex = self.updateScheduler(xml)
+        if(incrementedIndex["statusCode"] != '200'):
+            return incrementedIndex
+
+        checkToDeleteAndExit = incrementedIndex["body"]
+        if(not ((self.sizeOfCurrentUUID - 1) < self.indexOfCurrentUUID and checkToDeleteAndExit)):
+            resultOfUploadAndPlay = self.uploadAndPlayNextEvents(xml)
+            if (resultOfUploadAndPlay["statusCode"] != '200'):
+                return resultOfUploadAndPlay
+
+        resultDeleteEvents = self.deleteEvents()
+        if (resultDeleteEvents["statusCode"] != '200'):
+            return resultDeleteEvents
+
+        return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
+
+    def updateScheduler(self, xml):
         index = 0
         flagForEventsPlayingAlready = True
         initialRunningEvents = True
         noInitialRunningEvents = True
         incrementedIndex = False
-        while(flagForEventsPlayingAlready):
+        while (flagForEventsPlayingAlready):
             resultOfEvents = self.getLiveEventForFrontEnd()
             runningEvent = resultOfEvents["running"]
             pendingEvent = resultOfEvents["pending"]
@@ -66,16 +83,16 @@ class SchedulerController:
                 currentUUID = self.listOfInputTimes[index].get('uid')
                 currentUUID = currentUUID.replace("urn:uuid:", "")
 
-            if(runningEvent != "" and initialRunningEvents):
+            if (runningEvent != "" and initialRunningEvents):
                 noInitialRunningEvents = False
-                if(runningEvent == currentUUID):
+                if (runningEvent == currentUUID):
                     self.indexOfCurrentUUID = index + 1
                     initialRunningEvents = False
                     noInitialRunningEvents = True
                     incrementedIndex = True
                     continue
 
-                if(pendingEvent == currentUUID):
+                if (pendingEvent == currentUUID):
                     initialRunningEvents = False
                     noInitialRunningEvents = True
                     self.indexOfCurrentUUID = index
@@ -86,8 +103,7 @@ class SchedulerController:
                     index += 1
                     incrementedIndex = True
 
-
-            #if there is no events running or pending, then start this one right up since it is the first one to start.
+            # if there is no events running or pending, then start this one right up since it is the first one to start.
             if (runningEvent == "" and pendingEvent == "" and noInitialRunningEvents):
                 initialRunningEvents = False
                 if (incrementedIndex):
@@ -97,7 +113,7 @@ class SchedulerController:
                     if (convertResult["statusCode"] != '200'):
                         return convertResult
 
-                if(not incrementedIndex):
+                if (not incrementedIndex):
                     # this converts and starts the initial event in Live
                     convertResult = self.convertSendStartInitialLiveEvent(xml, None)
                     if (convertResult["statusCode"] != '200'):
@@ -120,24 +136,7 @@ class SchedulerController:
                 incrementedIndex = False
                 continue
 
-        if ((self.sizeOfCurrentUUID - 1) < self.indexOfCurrentUUID and incrementedIndex):
-            resultDeleteEvents = self.deleteEvents()
-            if (resultDeleteEvents["statusCode"] != '200'):
-                return resultDeleteEvents
-
-            return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
-
-
-        resultOfUploadAndPlay = self.uploadAndPlayNextEvents(xml)
-        if (resultOfUploadAndPlay["statusCode"] != '200'):
-            return resultOfUploadAndPlay
-
-        resultDeleteEvents = self.deleteEvents()
-        if (resultDeleteEvents["statusCode"] != '200'):
-            return resultDeleteEvents
-
-
-        return {'statusCode': '200', "body": 'The process was successfully loaded to Live and finished'}
+        return {'statusCode': '200', 'body' : incrementedIndex}
 
     def uploadAndPlayNextEvents(self, xml):
         xmlConverterService = XMLGenerator()
@@ -531,8 +530,3 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', 'body': 'Failed to get Profile ID. Error: ' + str(e)}
         return event
-
-sched = SchedulerController()
-#res = sched.inputxml("<?xml version='1.0'?><BxfMessage><BxfData action='add'><Schedule action='add' ScheduleEnd='2017-08-17T21:06:01.026Z' ScheduleStart='2017-08-17T20:56:53.026Z' ScheduleId='fcdef9e0-7614-401e-9fc2-01834de2e81a' type='Primary'><Channel action='add' type='digital_television' outOfBand='true' shortName='Default Name' ca='false' status='active' channelNumber='0-1'/><ScheduleName>Default Name</ScheduleName><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:fed86d46-bfef-4799-a662-fe5c7382f030</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>1</SegmentNumber><ProgramName>big</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T20:56:53.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:01:00</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>big_buck_bunny.mp4</HouseNumber></ContentId><Name>big</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:88d37a88-08fd-41bd-b53a-7376affe6c19</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>2</SegmentNumber><ProgramName>big2</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T20:57:53.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:01:00</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>big_buck_bunny.mp4</HouseNumber></ContentId><Name>big2</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:916c5133-5d9c-44b9-b28a-456ac92da65a</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>3</SegmentNumber><ProgramName>cat</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T20:58:53.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:03:36</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>nyan-cat-sample.mp4</HouseNumber></ContentId><Name>cat</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/nyan-cat-sample.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:3e260f42-f25a-4c1e-8fa7-9d83da184bea</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>4</SegmentNumber><ProgramName>rick</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-17T21:02:29.026Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:03:32</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>Rick Astley - Never Gonna Give You Up [HQ].mp4</HouseNumber></ContentId><Name>rick</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/Rick%20Astley%20-%20Never%20Gonna%20Give%20You%20Up%20%5BHQ%5D.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent></Schedule></BxfData></BxfMessage>", "path")
-res = sched.inputxml("<?xml version='1.0'?><BxfMessage><BxfData action='add'><Schedule action='add' ScheduleEnd='2017-08-18T17:47:44.951Z' ScheduleStart='2017-08-18T17:43:08.951Z' ScheduleId='41678f6c-bc25-40d5-be04-876fa68add9a' type='Primary'><Channel action='add' type='digital_television' outOfBand='true' shortName='Default Name' ca='false' status='active' channelNumber='0-1'/><ScheduleName>Default Name</ScheduleName><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:4286f3a6-4f3b-43b5-bce8-7d6e1ab8498f</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>1</SegmentNumber><ProgramName>jkj</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-18T17:43:08.951Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:01:00</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>big_buck_bunny.mp4</HouseNumber></ContentId><Name>jkj</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/big_buck_bunny.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent><ScheduledEvent><EventData action='add' eventType='primary'><EventId><EventId>urn:uuid:5f2e3beb-66e3-457e-a1f4-c7a0baf796ed</EventId></EventId><PrimaryEvent><ProgramEvent><SegmentNumber>2</SegmentNumber><ProgramName>jkhk</ProgramName></ProgramEvent></PrimaryEvent><StartDateTime><SmpteDateTime broadcastDate=''><SmpteTimeCode>2017-08-18T17:44:08.951Z</SmpteTimeCode></SmpteDateTime></StartDateTime><LengthOption><Duration><SmpteDuration frameRate='30'><SmpteTimeCode>00:03:36</SmpteTimeCode></SmpteDuration></Duration></LengthOption><StartMode>Duration</StartMode><EndMode>Duration</EndMode><Transitions><VideoTransitions><TransitionOutType>Cut</TransitionOutType><TransitionOutRate>Medium</TransitionOutRate></VideoTransitions></Transitions></EventData><Content><ContentId><HouseNumber>nyan-cat-sample.mp4</HouseNumber></ContentId><Name>jkhk</Name><Description>program description</Description><Media><PrecompressedTS><TSVideo><DigitalVideo>true</DigitalVideo><Format>1080p</Format><AspectRatio>16:9</AspectRatio></TSVideo><TSCaptioning>true</TSCaptioning></PrecompressedTS><MediaLocation><Location><AssetServer playoutAllowed='true' fileTransferAllowed='true'><PathName>https://s3-us-west-2.amazonaws.com/pdxteamdkrakatoa/nyan-cat-sample.mp4</PathName></AssetServer></Location></MediaLocation></Media></Content></ScheduledEvent></Schedule></BxfData></BxfMessage>", "path")
-print res
