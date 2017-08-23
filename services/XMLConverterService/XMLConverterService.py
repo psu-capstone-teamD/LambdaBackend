@@ -91,7 +91,7 @@ class XMLGenerator:
         liveXML = generateProfile(profileName)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def createRedirect(self, streamURL, deltaURL):
+    def createRedirect(self, deltaURL):
         """
         Create a live event that uses a UDP network input and an Apple HLS output to Delta.
         :param deltaURL: The URL for the master manifest file in Delta.
