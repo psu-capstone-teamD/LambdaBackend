@@ -43,6 +43,12 @@ class LiveService:
         endpoint = '/live_event_profiles'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))
 
+    def updateLiveEvent(self, eventID, xml):
+        endpoint = '/live_events/' + str(eventID)
+        headers = self.setHeaders(endpoint)
+        headers['unlocked'] = '1'
+        return put(self.BASEURL + endpoint, data=xml, headers=headers)
+
     def updatePlaylist(self, eventID, xml):
         endpoint = '/live_events/' + str(eventID) + '/playlist'
         return post(self.BASEURL + endpoint, data=xml, headers=self.setHeaders(endpoint))

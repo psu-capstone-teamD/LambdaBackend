@@ -57,6 +57,11 @@ class ConverterTests(unittest.TestCase):
         val = generateEvent(meta, inputs, "path")
         self.assertEqual(val.getroot().find('./input/order').text, '1')
 
+    def testGeneratRedirect(self):
+        deltaURL = "http://delta-1-yanexx65s8e5.live.elementalclouddev.com/in_put/test.m3u8"
+        redirect = genertateRedirect(deltaURL)
+        self.assertEqual(redirect.getroot().find('./output_group/output/name_modifier').text, 'output')
+
     def testGenerateSchedule(self):
         meta = {'name': 'aname', 'startTime': '1', 'endTime': '2'}
         inputs = [{'order': '1', 'uid': '1', 'uri': '1'},
@@ -72,9 +77,7 @@ class ConverterTests(unittest.TestCase):
 
     def testGenerateProfile(self):
         profileName = "TestProfile"
-        outputPath = "TestPath"
-        outputSettings = "UDP"
-        val = generateProfile(profileName, outputPath, outputSettings)
+        val = generateProfile(profileName)
         self.assertEqual(val.getroot().find('./output_group/type').text, 'udp_group_settings')
 
     def testParseEvents(self):

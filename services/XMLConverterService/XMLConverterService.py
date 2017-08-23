@@ -1,6 +1,5 @@
-import xml.etree.ElementTree as ET
-import re
 from GenerateXML import *
+import re
 
 
 class XMLGenerator:
@@ -81,16 +80,24 @@ class XMLGenerator:
         liveXML = generateUpdate(events)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
-    def convertProfile(self, bxfXML, profileName, outputPath):
+    def convertProfile(self, bxfXML, profileName):
         """
         Create a new profile for one event in a BXF playlist. The returned
         XML can be used for creating new profiles or updating old ones.
         :param bxfXML: BXF file as a string.
         :param profileName: Unique name for the profile.
-        :param outputPath: The destination address for the stream.
         :return: XML for a live event profile.
         """
-        liveXML = generateProfile(profileName, outputPath, "UDP")
+        liveXML = generateProfile(profileName)
+        return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
+
+    def createRedirect(self, deltaURL):
+        """
+        Create a live event that uses a UDP network input and an Apple HLS output to Delta.
+        :param deltaURL: The URL for the master manifest file in Delta.
+        :return: XML for a redirect live event as a string.
+        """
+        liveXML = genertateRedirect(deltaURL)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def parseMetadata(self, root):
