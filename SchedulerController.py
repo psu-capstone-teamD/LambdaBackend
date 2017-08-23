@@ -10,6 +10,7 @@ import re
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
+        self.bxfFileName = 'bxffile.xml'
         self.secondsLeftSendingNextVideo = 30
         self.secondsLeftPlayingNextVideo = 2
         self.outPutPath = None
@@ -22,9 +23,9 @@ class SchedulerController:
         self.currentUUID = None
         self.s3service = S3Service()
         #this sets the year directory, month and day/time in the bxfBucket of S3
-        self.bxfFileName = "year_" + \
+        '''self.bxfFileName = "year_" + \
             time.strftime("%Y/month_%m/day%d") + "time_" + \
-            time.strftime("%H:%M:%S")
+            time.strftime("%H:%M:%S")'''
         self.EVENT_ID = None
         self.xmlError = {'statusCode': '400', "body": 'Not valid xml structure'}
 
@@ -150,6 +151,10 @@ class SchedulerController:
         flagForLastPlay = True
         # Keep looping until no more videos to upload and no more pending videos to play
         while (flagEventFinished or flagForLastPlay):
+            s3 = S3Service()
+            xmlNewer = s3.getxml(self.bxfstorage, self.bxfFileName)
+            xmlConverterService.elementsEqual(xmlNe)
+
             runningEventID = self.getCurrentRunningEventID()
             if(not runningEventID.isdigit()):
                 return {'statusCode': '400', "body": 'Could not get current running event id'}
