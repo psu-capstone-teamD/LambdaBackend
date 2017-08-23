@@ -5,6 +5,15 @@ from GenerateXML import *
 
 class XMLGenerator:
 
+    def iterateToSchedule(self, bxfXML):
+        """
+        Iterates to the Schedule tag of the BXF file and removes default namespaces.
+        :param bxfXML: BXF file as a string.
+        :return: The root element of the bxf XML tree.
+        """
+        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # remove namespace
+        return (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+
     def convertEvent(self, bxfXML, uuid, outputPath):
         """
         Create a new live event without a profile.
@@ -13,13 +22,12 @@ class XMLGenerator:
         :param outputPath: The destination address for the stream.
         :return: XML for a live event without a profile.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         metadata = self.parseMetadata(root)
         try:
             events = self.nextEvent(self.parseEvents(root), uuid)
         except RuntimeError:
-            return "Error, could not find the next event."
+            return "Error: Could not find the next event."
         liveXML = generateEvent(metadata, events, outputPath)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -29,16 +37,14 @@ class XMLGenerator:
         :param bxfXML: BXF file as a string.
         :param profileID: Required profile ID.
         :param uuid: UUID of the currently streaming event. Can be set to None.
-        :param outputPath: The destination address for the stream.
         :return: XML for a live event with profile number.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         metadata = self.parseMetadata(root)
         try:
             events = self.nextEvent(self.parseEvents(root), uuid)
         except RuntimeError:
-            return "Error, could not find the next event."
+            return "Error: Could not find the next event."
         liveXML = generateEventWithProfile(metadata, events, profileID)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -50,13 +56,12 @@ class XMLGenerator:
         :param profileID: Required profile ID.
         :return: XML for a schedule.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         metadata = self.parseMetadata(root)
         try:
             events = self.nextNevents(None, self.parseEvents(root), None)
         except RuntimeError:
-            return "Error, could not find the next event."
+            return "Error: Could not find the next event."
         liveXML = generateSchedule(profileID, metadata, events)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
@@ -68,8 +73,7 @@ class XMLGenerator:
         :param currentVideoUUID: UUID of the currently streaming video.
         :return: XML for a modified live event playlist.
         """
-        bxfXML = re.sub('\\sxmlns="[^"]+"', '', bxfXML, count=1)    # prevents namespaces
-        root = (ET.fromstring(bxfXML)).find('.//BxfData/Schedule')
+        root = self.iterateToSchedule(bxfXML)
         try:
             events = self.nextNevents(1, self.parseEvents(root), currentVideoUUID)
         except RuntimeError:
@@ -158,15 +162,24 @@ class XMLGenerator:
         return []
 
     def elementsEqual(self, e1, e2):
-        if e1.tag != e2.tag: return False
-        if e1.text != e2.text:
+        """
+        Check if all elements in an ElementTree object are equal.
+        :param e1: Root element of the first tree.
+        :param e2: Root element of the second tree.
+        :return: True - equal, False - not equal.
+        """
+        if e1.tag != e2.tag or e1.text != e2.text or e1.attrib != e2.attrib:
             return False
-        if e1.attrib != e2.attrib: return False
         return all(self.elementsEqual(c1, c2) for c1, c2 in zip(e1, e2))
 
-    def validateXML(self, bxf_xml):
+    def validateXML(self, bxfXML):
+        """
+        Verify if a string has a well-formed xml structure.
+        :param bxfXML: BXF file as a string.
+        :return: Status code 200 for valid or 400 for not valid.
+        """
         try:
-            ET.fromstring(bxf_xml)
+            ET.fromstring(bxfXML)
         except ET.ParseError:
-            return "StatusCode: 400: Not valid .xml structure"
+            return "StatusCode: 400: Not valid XML structure"
         return "StatusCode: 200"
