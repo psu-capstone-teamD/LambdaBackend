@@ -80,10 +80,6 @@ class SchedulerController:
             pendingEvent = resultOfEvents["pending"]
 
             if(pendingEvent != ""):
-                flagForEventsPlayingAlready = True
-                initialRunningEvents = True
-                noInitialRunningEvents = True
-                incrementedIndex = False
                 continue
 
             if (not (self.sizeOfCurrentUUID - 1) < index):
