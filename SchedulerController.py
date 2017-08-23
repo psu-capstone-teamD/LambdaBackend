@@ -214,6 +214,10 @@ class SchedulerController:
             # if seconds left on video is under self.secondsLeftSendingNextVideo time, send another video up
             if ((self.totalDuration - int(
                     elapsedTime)) < self.secondsLeftSendingNextVideo and waitingToPlay and flagEventFinished):
+                #check to make sure index not out of range
+                if ((self.sizeOfCurrentUUID - 1) < self.indexOfCurrentUUID):
+                    flagEventFinished = False
+                    continue
                 # Get the uuid of the last video that played and run through converter service to get Live code for next video
                 try:
                     auuid = self.listOfInputTimes[self.indexOfCurrentUUID - 1].get('uid')
