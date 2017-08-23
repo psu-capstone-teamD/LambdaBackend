@@ -96,17 +96,14 @@ def generateEvent(metadata, events, outputPath):
     ET.SubElement(output, "container").text = "m2ts"
     return ET.ElementTree(eventHeader)
 
-def genertateRedirect(streamURL, deltaURL):
+def genertateRedirect(deltaURL):
     """
     Generate XML for a redirect event.
-    :param streamURL: The URL for the live stream in the output group.
     :param deltaURL: The URL for the master manifest file in Delta.
     :return: XML tree for a redirect live event.
     """
 
-    destURL = re.sub(".m3u8", "", deltaURL)              # remove file type
-    result = re.search(destURL+"(.*).m3u8", streamURL)   # extract name modifier
-    nameModifier = result.group(1)
+    deltaURL = re.sub(".m3u8", "", deltaURL)              # remove file type
 
     eventHeader = ET.Element("live_event")
     ET.SubElement(eventHeader, "name").text = "Redirect"
@@ -152,9 +149,9 @@ def genertateRedirect(streamURL, deltaURL):
     ALGsettings = ET.SubElement(outputGroup, "apple_live_group_settings")
     ET.SubElement(ALGsettings, "cdn").text = "Basic_PUT"
     destination = ET.SubElement(ALGsettings, "destination")
-    ET.SubElement(destination, "uri").text = destURL
+    ET.SubElement(destination, "uri").text = deltaURL
     output = ET.SubElement(outputGroup, "output")
-    ET.SubElement(output, "name_modifier").text = nameModifier
+    ET.SubElement(output, "name_modifier").text = "output"
     ET.SubElement(output, "stream_assembly_name").text = "SA1"
     ET.SubElement(output, "container").text = "m3u8"
     return ET.ElementTree(eventHeader)

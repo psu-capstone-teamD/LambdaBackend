@@ -1,4 +1,5 @@
 from GenerateXML import *
+import re
 
 
 class XMLGenerator:
@@ -93,11 +94,10 @@ class XMLGenerator:
     def createRedirect(self, streamURL, deltaURL):
         """
         Create a live event that uses a UDP network input and an Apple HLS output to Delta.
-        :param streamURL: The URL for the live stream in the output group.
         :param deltaURL: The URL for the master manifest file in Delta.
         :return: XML for a redirect live event as a string.
         """
-        liveXML = genertateRedirect(streamURL, deltaURL)
+        liveXML = genertateRedirect(deltaURL)
         return ET.tostring(liveXML.getroot(), encoding='UTF-8', method='xml')
 
     def parseMetadata(self, root):

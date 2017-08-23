@@ -57,10 +57,9 @@ class ConverterTests(unittest.TestCase):
         val = generateEvent(meta, inputs, "path")
         self.assertEqual(val.getroot().find('./input/order').text, '1')
 
-    def testGenerateRedirect(self):
-        streamURL = "http://delta-1-yanexx65s8e5.live.elementalclouddev.com/in_put/testoutput.m3u8"
+    def testGeneratRedirect(self):
         deltaURL = "http://delta-1-yanexx65s8e5.live.elementalclouddev.com/in_put/test.m3u8"
-        redirect = genertateRedirect(streamURL, deltaURL)
+        redirect = genertateRedirect(deltaURL)
         self.assertEqual(redirect.getroot().find('./output_group/output/name_modifier').text, 'output')
 
     def testGenerateSchedule(self):
