@@ -4,7 +4,6 @@ from services.XMLConverterService.XMLConverterService import XMLGenerator
 import xml.etree.ElementTree as ET
 import time
 import uuid
-import re
 
 
 class SchedulerController:
@@ -208,8 +207,7 @@ class SchedulerController:
         # get the start/end/duration times for each video from converter service
         xmlConverterService = XMLGenerator()
         try:
-            bxfxml = re.sub('\\sxmlns="[^"]+"', '', xml, count=1)  # prevents namespaces
-            root = (ET.fromstring(bxfxml)).find('.//BxfData/Schedule')
+            root = xmlConverterService.iterateToSchedule(xml)
             self.listOfInputTimes = xmlConverterService.parseEvents(root)
             self.sizeOfCurrentUUID = len(self.listOfInputTimes)
         except Exception as e:
