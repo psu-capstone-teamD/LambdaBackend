@@ -378,8 +378,11 @@ class SchedulerController:
     def deleteLiveEvent(self, eventID):
         liveservice = LiveService()
         self.EVENT_ID = self.getCurrentEventId()
-        if (not self.EVENT_ID.isdigit()):
+        try:
+            self.EVENT_ID.isdigit()
+        except Exception as e:
             return {'statusCode': '400', "body": 'Could not get the Current event ID'}
+
         results = liveservice.removeEvent(eventID)
         return results
 
@@ -419,8 +422,12 @@ class SchedulerController:
         liveservice = LiveService()
         # get and set live event id
         self.EVENT_ID = self.getCurrentEventId()
-        if (not self.EVENT_ID.isdigit()):
+
+        try:
+            self.EVENT_ID.isdigit()
+        except Exception as e:
             return {'statusCode': '400', "body": 'Could not get the Current event ID'}
+
         results = liveservice.updatePlaylist(self.EVENT_ID, convertedxml)
         return results
 
