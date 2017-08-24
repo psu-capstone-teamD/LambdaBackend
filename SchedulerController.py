@@ -47,9 +47,8 @@ class SchedulerController:
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
 
-
         #Get the start time from the front end and split it up to check if it is supposed to play now or later
-        root = xmlConverterService.iterateToSchedule(xml)
+        '''root = xmlConverterService.iterateToSchedule(xml)
         metaData = xmlConverterService.parseMetadata(root)
         startTime = metaData['startTime']
         head, sep, tail = startTime.partition('T')
@@ -66,7 +65,7 @@ class SchedulerController:
 
             hoursBack, minutesBack, secondsBack = map(int, startTimeFromBackend.split(':'))
             if(int(hoursFront) == int(hoursBack) and int(minutesFront) < int(minutesBack)):
-                flagToPopOutOfLoop = False
+                flagToPopOutOfLoop = False'''
 
         # this gets the duration times for each UUID that was retrieved from the BXF for all the videos
         # Sets them in a List
@@ -105,8 +104,15 @@ class SchedulerController:
             runningEvent = resultOfEvents["running"]
             pendingEvent = resultOfEvents["pending"]
 
-            #wait for pending events to move to running.
-            #this allows for the pending event to become running so that it doesn't error.
+            #Make sure there isn't pending events sitting there waiting to be played.
+            if(pendingEvent != "" and runningEvent == ""):
+                pendingEventIDtoPlay = self.getCurrentPendingEventID()
+                self.startLiveEvent(pendingEventIDtoPlay)
+                time.sleep(1)
+                continue
+
+            # wait for pending events to move to running.
+            # this allows for the pending event to become running so that it doesn't error.
             if(pendingEvent != ""):
                 continue
 
