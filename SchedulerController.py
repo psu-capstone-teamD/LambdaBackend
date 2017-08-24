@@ -4,13 +4,14 @@ from services.XMLConverterService.XMLConverterService import XMLGenerator
 import xml.etree.ElementTree as ET
 import time
 import uuid
+import datetime
 
 
 class SchedulerController:
     def __init__(self):
         self.bxfstorage = 'bxfstorage'
         self.bxfFileName = 'bxffile.xml'
-        self.secondsLeftSendingNextVideo = 30
+        self.secondsLeftSendingNextVideo = 20
         self.secondsLeftPlayingNextVideo = 2
         self.outPutPath = None
         self.profileName = str(uuid.uuid4())
@@ -45,6 +46,27 @@ class SchedulerController:
         bxfBucketResponse = self.storebxffile(self.bxfFileName, xml)
         if(bxfBucketResponse["statusCode"] != '200'):
             return bxfBucketResponse
+
+
+        #Get the start time from the front end and split it up to check if it is supposed to play now or later
+        root = xmlConverterService.iterateToSchedule(xml)
+        metaData = xmlConverterService.parseMetadata(root)
+        startTime = metaData['startTime']
+        head, sep, tail = startTime.partition('T')
+        startTimeFromFrontEnd, sep, tail = tail.partition('.')
+        hoursFront, minutesFront, secondsFront = map(int, startTimeFromFrontEnd.split(':'))
+
+        #do the check to see if there is any time difference so that we can see if they scheduled it out.
+        flagToPopOutOfLoop = True
+        while(flagToPopOutOfLoop):
+            utcnow = datetime.datetime.utcnow()
+            myTime = str(utcnow)
+            head, sep, tail = myTime.partition(' ')
+            startTimeFromBackend, sep, tail = tail.partition('.')
+
+            hoursBack, minutesBack, secondsBack = map(int, startTimeFromBackend.split(':'))
+            if(int(hoursFront) == int(hoursBack) and int(minutesFront) < int(minutesBack)):
+                flagToPopOutOfLoop = False
 
         # this gets the duration times for each UUID that was retrieved from the BXF for all the videos
         # Sets them in a List
@@ -571,3 +593,4 @@ class SchedulerController:
         except Exception as e:
             return {'statusCode': '400', 'body': 'Failed to get Profile ID. Error: ' + str(e)}
         return event
+
