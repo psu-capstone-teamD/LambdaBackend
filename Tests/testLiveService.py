@@ -87,7 +87,15 @@ class LiveServiceTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 201)
 
     @requests_mock.Mocker()
-    def testUpdateLiveEvent(self, m):
+    def testUpdateEvent(self, m):
+        with open('Tests/test_XML/live_event.xml', 'r') as infile:
+            xml = infile.read()
+        m.put(baseURL + "/live_events/50", status_code=200)
+        resp = L.updateLiveEvent(50, xml)
+        self.assertEqual(resp.status_code, 200)
+
+    @requests_mock.Mocker()
+    def testUpdatePlaylist(self, m):
         with open('Tests/test_XML/live_event.xml', 'r') as infile:
             xml = infile.read()
         m.post(baseURL + "/live_events/92/playlist", status_code=200)
